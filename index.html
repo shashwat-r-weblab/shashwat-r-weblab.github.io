@@ -1,5 +1,168 @@
-<html>
-  <body>
-    Shashwat's WebLab
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Potato Smacker</title>
+  <link rel="icon" href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-icon64.png" type="image/png">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .rock-container {
+      position: relative;
+      display: inline-block;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .rock-container:active {
+      transform: scale(1.1);
+    }
+
+    .rock {
+      width: 350px;
+      height: 350px;
+      background-image: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato.png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    .counter {
+      margin-top: 10px;
+      font-size: 1.5rem;
+      color: #887766;
+      text-align: center;
+    }
+
+    .link-list {
+      margin-top: 20px;
+      list-style: none;
+      padding: 0;
+    }
+
+    .link-list li {
+      margin: 5px 0;
+    }
+
+    .link-list a {
+      color: #887766;
+      text-decoration: none;
+    }
+
+    .link-list a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Don't Smack the Potato</h1>
+  <div class="counter" id="counter">Despite how Smackable it looks!</div>
+
+  <div class="rock-container" onclick="incrementCounter()">
+    <div class="rock"></div>
+  </div>
+
+  <ul class="link-list">
+    <li><a href="#">Page 1</a></li>
+    <li><a href="#">Page 2</a></li>
+    <li><a href="#">Page 3</a></li>
+    <li><a href="#">Page 4</a></li>
+  </ul>
+
+  <audio id="smackSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/smack.mp3"></audio>
+  <audio id="dingSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/ding.mp3"></audio>
+
+  <script>
+    let counter = 0;
+    previous_integral_part = 0;
+    dialogue_prefix_text = ""
+    prefix_text_list_history = []
+
+    function incrementCounter() {
+      counter++;
+      counter_text = "You Smacked the Potato " + String(counter) + " times!"
+      if (counter == 1) counter_text = "You Smacked the Potato!"
+      prefix_text_list = [
+        "My Goodness! ",
+        "Are you still at this? ",
+        "Holy Cow! ",
+        "You know you can stop right? ",
+        "Unbelievable! ",
+        "Seriously? Still?? ",
+        "Goddamnit! ",
+        "This is a violation! ",
+        "Is this a cry for help? ",
+        "Why? ",
+        "You're really committed to this, huh? ",
+        "I have no words anymore. ",
+        "Somebody call a therapist! ",
+        "This has gone too far! ",
+        "Who hurt you? ",
+        "Blink twice if you need help! ",
+        "I wonder who the real Potato is! ",
+        "Your dedication is... disturbing! ",
+        "Stop it! Get some help. ",
+        "Therapy is always an option, you know? ",
+        "Don't you have a hobby? ",
+        "Oh great, now the FBI is watching. ",
+        "This is not how you win friends and influence people. ",
+        "The Potato is reconsidering it's existence. ",
+        "If stupidity were an Olympic sport, you'd be the coach. ",
+        "Please explain this to your future self. ",
+        "You are one screen refresh away from wiping your progress. ",
+        "The Potato is filing a grievance. ",
+        "The Potato didn't consent to this. ",
+        "This would be impressive if it wasn't concerning. ",
+        "What would your ancestors say? ",
+      ]
+      current_integral_part = Math.floor(counter/25)
+      if (current_integral_part !== previous_integral_part) {
+        previous_integral_part = current_integral_part
+        while(true) {
+          dialogue_prefix_text = prefix_text_list[Math.floor(Math.random()*prefix_text_list.length)]
+          if (prefix_text_list_history.length == 0) break
+          is_dialogue_old = false
+          for (i=0; i<prefix_text_list_history.length; i++) {
+            if (dialogue_prefix_text == prefix_text_list_history[i]) is_dialogue_old = true
+          }
+          if (!is_dialogue_old) break
+        }
+        prefix_text_list_history.push(dialogue_prefix_text)
+        if (prefix_text_list_history.length > 5) prefix_text_list_history.shift()
+        playDingSound()
+      }
+      display_text = dialogue_prefix_text + counter_text
+      const counterElement = document.getElementById('counter');
+      counterElement.textContent = display_text;
+      playSmackSound()
+    }
+
+    function playSmackSound() {
+      const audio = document.getElementById('smackSound');
+      audio.currentTime = 0; // Reset audio to the beginning
+      audio.play();
+    }
+
+    function playDingSound() {
+      const audio = document.getElementById('dingSound');
+      audio.currentTime = 0; // Reset audio to the beginning
+      audio.play();
+    }
+  </script>
+</body>
 </html>
