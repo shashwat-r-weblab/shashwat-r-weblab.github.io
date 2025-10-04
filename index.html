@@ -1,168 +1,194 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Potato Smacker</title>
-  <link rel="icon" href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-icon64.png" type="image/png">
+  <meta charset="utf-8" />
+  <title>WebApp List</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
+    :root {
+      --bg: #ffffff;
+      --fg: #111;
+      --muted: #666;
+      --card: #fff;
+      --border: #e6e6e6;
+      --shadow: 0 6px 20px rgba(0, 0, 0, .06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e0f12;
+        --fg: #e9e9ea;
+        --muted: #a0a3a7;
+        --card: #14161a;
+        --border: #262a31;
+        --shadow: 0 8px 28px rgba(0, 0, 0, .35);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
       margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      padding: 0
+    }
+
+    body {
+      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: saturate(140%) blur(8px);
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 18px 16px;
     }
 
     h1 {
-      margin-bottom: 20px;
+      font-size: clamp(22px, 4vw, 32px);
+      letter-spacing: .2px;
     }
 
-    .rock-container {
-      position: relative;
-      display: inline-block;
-      cursor: pointer;
-      transition: transform 0.2s;
+    main.list {
+      max-width: 800px;
+      margin: 24px auto 60px;
+      padding: 0 16px;
+      display: grid;
+      gap: 20px;
     }
 
-    .rock-container:active {
-      transform: scale(1.1);
-    }
-
-    .rock {
-      width: 350px;
-      height: 350px;
-      background-image: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato.png');
-      background-size: cover;
-      background-position: center;
-    }
-
-    .counter {
-      margin-top: 10px;
-      font-size: 1.5rem;
-      color: #887766;
-      text-align: center;
-    }
-
-    .link-list {
-      margin-top: 20px;
-      list-style: none;
-      padding: 0;
-    }
-
-    .link-list li {
-      margin: 5px 0;
-    }
-
-    .link-list a {
-      color: #887766;
+    a.card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: var(--shadow);
       text-decoration: none;
+      color: inherit;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
     }
 
-    .link-list a:hover {
-      text-decoration: underline;
+    a.card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
+      border-color: color-mix(in srgb, var(--border) 70%, var(--fg) 30%);
+    }
+
+    .thumb {
+      flex: 0 0 120px;
+      height: 100px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #222;
+    }
+
+    .info {
+      flex: 1;
+      text-align: left;
+      padding-right: 10px;
+    }
+
+    .title {
+      font-size: clamp(18px, 2.6vw, 22px);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* Mobile layout: stack image below text */
+    @media (max-width:600px) {
+      a.card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .thumb {
+        width: 100%;
+        height: 200px;
+      }
+
+      .info {
+        padding-right: 0;
+      }
     }
   </style>
 </head>
+
 <body>
-  <h1>Don't Smack the Potato</h1>
-  <div class="counter" id="counter">Despite how Smackable it looks!</div>
+  <header>
+    <div class="wrap">
+      <h1>WebApp List</h1>
+    </div>
+  </header>
 
-  <div class="rock-container" onclick="incrementCounter()">
-    <div class="rock"></div>
-  </div>
-
-  <ul class="link-list">
-    <li><a href="#">Page 1</a></li>
-    <li><a href="#">Page 2</a></li>
-    <li><a href="#">Page 3</a></li>
-    <li><a href="#">Page 4</a></li>
-  </ul>
-
-  <audio id="smackSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/smack.mp3"></audio>
-  <audio id="dingSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/ding.mp3"></audio>
+  <main class="list" id="articleList"></main>
 
   <script>
-    let counter = 0;
-    previous_integral_part = 0;
-    dialogue_prefix_text = ""
-    prefix_text_list_history = []
+    // --- Store articles as a list (array) ---
+    const articles = [
+      {
+        title: "Potato Smacker",
+        subtitle: "Smack a succulent potato to your heart's content",
+        image: "https://shashwat-r-weblab.github.io/potato-smacker/preview.png",
+        link: "https://shashwat-r-weblab.github.io/potato-smacker/index.html",
+      },
+      {
+        title: "WebPage Renderer",
+        subtitle: "Paste code for a html webpage, and render it on the fly",
+        image: "https://shashwat-r-weblab.github.io/webpage-renderer/preview.png",
+        link: "https://shashwat-r-weblab.github.io/webpage-renderer/index.html",
+      },
+    ];
 
-    function incrementCounter() {
-      counter++;
-      counter_text = "You Smacked the Potato " + String(counter) + " times!"
-      if (counter == 1) counter_text = "You Smacked the Potato!"
-      prefix_text_list = [
-        "My Goodness! ",
-        "Are you still at this? ",
-        "Holy Cow! ",
-        "You know you can stop right? ",
-        "Unbelievable! ",
-        "Seriously? Still?? ",
-        "Goddamnit! ",
-        "This is a violation! ",
-        "Is this a cry for help? ",
-        "Why? ",
-        "You're really committed to this, huh? ",
-        "I have no words anymore. ",
-        "Somebody call a therapist! ",
-        "This has gone too far! ",
-        "Who hurt you? ",
-        "Blink twice if you need help! ",
-        "I wonder who the real Potato is! ",
-        "Your dedication is... disturbing! ",
-        "Stop it! Get some help. ",
-        "Therapy is always an option, you know? ",
-        "Don't you have a hobby? ",
-        "Oh great, now the FBI is watching. ",
-        "This is not how you win friends and influence people. ",
-        "The Potato is reconsidering it's existence. ",
-        "If stupidity were an Olympic sport, you'd be the coach. ",
-        "Please explain this to your future self. ",
-        "You are one screen refresh away from wiping your progress. ",
-        "The Potato is filing a grievance. ",
-        "The Potato didn't consent to this. ",
-        "This would be impressive if it wasn't concerning. ",
-        "What would your ancestors say? ",
-      ]
-      current_integral_part = Math.floor(counter/25)
-      if (current_integral_part !== previous_integral_part) {
-        previous_integral_part = current_integral_part
-        while(true) {
-          dialogue_prefix_text = prefix_text_list[Math.floor(Math.random()*prefix_text_list.length)]
-          if (prefix_text_list_history.length == 0) break
-          is_dialogue_old = false
-          for (i=0; i<prefix_text_list_history.length; i++) {
-            if (dialogue_prefix_text == prefix_text_list_history[i]) is_dialogue_old = true
-          }
-          if (!is_dialogue_old) break
-        }
-        prefix_text_list_history.push(dialogue_prefix_text)
-        if (prefix_text_list_history.length > 5) prefix_text_list_history.shift()
-        playDingSound()
-      }
-      display_text = dialogue_prefix_text + counter_text
-      const counterElement = document.getElementById('counter');
-      counterElement.textContent = display_text;
-      playSmackSound()
-    }
+    // --- Render the cards dynamically ---
+    const container = document.getElementById("articleList");
 
-    function playSmackSound() {
-      const audio = document.getElementById('smackSound');
-      audio.currentTime = 0; // Reset audio to the beginning
-      audio.play();
-    }
+    articles.forEach(item => {
+      const card = document.createElement("a");
+      card.className = "card";
+      card.href = item.link;
+      card.rel = "noopener";
 
-    function playDingSound() {
-      const audio = document.getElementById('dingSound');
-      audio.currentTime = 0; // Reset audio to the beginning
-      audio.play();
-    }
+      const info = document.createElement("div");
+      info.className = "info";
+
+      const title = document.createElement("h2");
+      title.className = "title";
+      title.textContent = item.title;
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "subtitle";
+      subtitle.textContent = item.subtitle;
+
+      info.append(title, subtitle);
+
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.src = item.image;
+      img.alt = item.title;
+
+      // Image on the right
+      card.append(info, img);
+      container.appendChild(card);
+    });
   </script>
 </body>
+
 </html>
