@@ -95,18 +95,19 @@
 
     // Unified input listener for both click and tap
     function addUnifiedInputListener(element, callback) {
-      let touchHandled = false;
+      let touchTriggered = false;
 
       element.addEventListener("touchstart", e => {
-        if (!touchHandled) {
-          touchHandled = true;
-          callback(e);
-          setTimeout(() => touchHandled = false, 300);
-        }
+        touchTriggered = true;
+        callback(e);
       }, { passive: true });
 
       element.addEventListener("click", e => {
-        if (!touchHandled) callback(e);
+        if (touchTriggered) {
+          touchTriggered = false; // reset
+          return; // skip duplicate click
+        }
+        callback(e);
       });
     }
 
