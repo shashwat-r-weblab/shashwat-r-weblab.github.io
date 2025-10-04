@@ -68,8 +68,8 @@
 
     a.card {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: stretch;
       gap: 18px;
       padding: 18px 20px;
       border: 1px solid var(--border);
@@ -79,6 +79,9 @@
       text-decoration: none;
       color: inherit;
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+      height: 180px;
+      /* Ensures all cards have equal height */
+      overflow: hidden;
     }
 
     a.card:hover {
@@ -87,16 +90,11 @@
       border-color: color-mix(in srgb, var(--border) 70%, var(--fg) 30%);
     }
 
-    .thumb {
-      flex: 0 0 120px;
-      height: 100px;
-      border-radius: 12px;
-      object-fit: cover;
-      background: #222;
-    }
-
     .info {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       text-align: left;
       padding-right: 10px;
     }
@@ -110,6 +108,25 @@
     .subtitle {
       color: var(--muted);
       font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .thumb {
+      flex: 0 0 40%;
+      /* 40% of the card width reserved for image */
+      border-radius: 12px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+      transform: scale(1.05);
+      /* ensures full coverage */
+      transition: transform .3s ease;
+    }
+
+    a.card:hover .thumb {
+      transform: scale(1.1);
+      /* smooth zoom-in on hover */
     }
 
     /* Mobile layout: stack image below text */
@@ -117,15 +134,19 @@
       a.card {
         flex-direction: column;
         align-items: flex-start;
+        height: auto;
       }
 
       .thumb {
         width: 100%;
-        height: 200px;
+        height: auto;
+        aspect-ratio: 16/9;
+        order: -1;
       }
 
       .info {
         padding-right: 0;
+        margin-top: 8px;
       }
     }
   </style>
