@@ -17,6 +17,9 @@
       align-items: center;
       justify-content: center;
       height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
 
     h1 {
@@ -27,11 +30,7 @@
       position: relative;
       display: inline-block;
       cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .rock-container:active {
-      transform: scale(1.1);
+      transition: transform 0.05s ease;
     }
 
     .rock {
@@ -40,6 +39,8 @@
       background-image: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png');
       background-size: cover;
       background-position: center;
+      /* border-radius: 90%; */
+      touch-action: manipulation;
     }
 
     .counter {
@@ -73,15 +74,12 @@
   <h1>Don't Smack the Potato</h1>
   <div class="counter" id="counter">Despite how Smackable it looks!</div>
 
-  <div class="rock-container" onclick="incrementCounter()">
+  <div class="rock-container" id="potato">
     <div class="rock"></div>
   </div>
 
   <ul class="link-list">
-    <li><a href="#">Page 1</a></li>
-    <li><a href="#">Page 2</a></li>
-    <li><a href="#">Page 3</a></li>
-    <li><a href="#">Page 4</a></li>
+    <li><i><a href="#">"don't fall for it's smackalicious crunchiness"</a></i></li>
   </ul>
 
   <audio id="smackSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/smack.mp3"></audio>
@@ -89,15 +87,37 @@
 
   <script>
     let counter = 0;
-    previous_integral_part = 0;
-    dialogue_prefix_text = ""
-    prefix_text_list_history = []
+    let previous_integral_part = 0;
+    let dialogue_prefix_text = "";
+    let prefix_text_list_history = [];
+    let rotationDirection = 1; // alternates +1 / -1
+    const potato = document.getElementById("potato");
+
+    // Unified input listener for both click and tap
+    function addUnifiedInputListener(element, callback) {
+      let touchHandled = false;
+
+      element.addEventListener("touchstart", e => {
+        if (!touchHandled) {
+          touchHandled = true;
+          callback(e);
+          setTimeout(() => touchHandled = false, 300);
+        }
+      }, { passive: true });
+
+      element.addEventListener("click", e => {
+        if (!touchHandled) callback(e);
+      });
+    }
+
+    addUnifiedInputListener(potato, incrementCounter);
 
     function incrementCounter() {
       counter++;
-      counter_text = "You Smacked the Potato " + String(counter) + " times!"
-      if (counter == 1) counter_text = "You Smacked the Potato!"
-      prefix_text_list = [
+      let counter_text = "You Smacked the Potato " + counter + " times!";
+      if (counter === 1) counter_text = "You Smacked the Potato!";
+
+      const prefix_text_list = [
         "My Goodness! ",
         "Are you still at this? ",
         "Holy Cow! ",
@@ -121,7 +141,7 @@
         "Don't you have a hobby? ",
         "Oh great, now the FBI is watching. ",
         "This is not how you win friends and influence people. ",
-        "The Potato is reconsidering it's existence. ",
+        "The Potato is reconsidering its existence. ",
         "If stupidity were an Olympic sport, you'd be the coach. ",
         "Please explain this to your future self. ",
         "You are one screen refresh away from wiping your progress. ",
@@ -129,39 +149,55 @@
         "The Potato didn't consent to this. ",
         "This would be impressive if it wasn't concerning. ",
         "What would your ancestors say? ",
-      ]
-      current_integral_part = Math.floor(counter/25)
+      ];
+
+      const current_integral_part = Math.floor(counter / 25);
       if (current_integral_part !== previous_integral_part) {
-        previous_integral_part = current_integral_part
-        while(true) {
-          dialogue_prefix_text = prefix_text_list[Math.floor(Math.random()*prefix_text_list.length)]
-          if (prefix_text_list_history.length == 0) break
-          is_dialogue_old = false
-          for (i=0; i<prefix_text_list_history.length; i++) {
-            if (dialogue_prefix_text == prefix_text_list_history[i]) is_dialogue_old = true
-          }
-          if (!is_dialogue_old) break
+        previous_integral_part = current_integral_part;
+
+        while (true) {
+          dialogue_prefix_text = prefix_text_list[Math.floor(Math.random() * prefix_text_list.length)];
+          if (prefix_text_list_history.length === 0) break;
+          let is_dialogue_old = prefix_text_list_history.includes(dialogue_prefix_text);
+          if (!is_dialogue_old) break;
         }
-        prefix_text_list_history.push(dialogue_prefix_text)
-        if (prefix_text_list_history.length > 5) prefix_text_list_history.shift()
-        playDingSound()
+
+        prefix_text_list_history.push(dialogue_prefix_text);
+        if (prefix_text_list_history.length > 5) prefix_text_list_history.shift();
+
+        playDingSound();
       }
-      display_text = dialogue_prefix_text + counter_text
-      const counterElement = document.getElementById('counter');
-      counterElement.textContent = display_text;
-      playSmackSound()
+
+      document.getElementById('counter').textContent = dialogue_prefix_text + counter_text;
+      playSmackSound();
+      animatePotato();
     }
 
     function playSmackSound() {
       const audio = document.getElementById('smackSound');
-      audio.currentTime = 0; // Reset audio to the beginning
+      audio.currentTime = 0;
       audio.play();
     }
 
     function playDingSound() {
       const audio = document.getElementById('dingSound');
-      audio.currentTime = 0; // Reset audio to the beginning
+      audio.currentTime = 0;
       audio.play();
+    }
+
+    function animatePotato() {
+      const rock = document.querySelector('.rock-container');
+
+      // Alternate rotation: +5° / -5° each smack
+      rotationDirection *= -1;
+      const rotation = rotationDirection * 5;
+
+      rock.style.transition = 'transform 0.05s ease';
+      rock.style.transform = `scale(1.1) rotate(${rotation}deg)`;
+
+      setTimeout(() => {
+        rock.style.transform = `scale(1.0) rotate(0deg)`;
+      }, 150);
     }
   </script>
 </body>
