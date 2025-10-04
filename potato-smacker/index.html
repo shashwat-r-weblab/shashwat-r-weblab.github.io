@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Potato Smacker</title>
-  <link rel="icon" href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-icon64.png" type="image/png">
+  <link rel="icon"
+    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-icon64.png"
+    type="image/png">
   <style>
+    html,
     body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
       background-color: #121212;
-      color: #ffffff;
+      color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -20,6 +24,7 @@
       user-select: none;
       -webkit-user-select: none;
       touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
 
     h1 {
@@ -36,11 +41,8 @@
     .rock {
       width: 350px;
       height: 350px;
-      background-image: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png');
-      background-size: cover;
-      background-position: center;
-      /* border-radius: 90%; */
-      touch-action: manipulation;
+      background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png') center/cover;
+      /* border-radius: 50%; */
     }
 
     .counter {
@@ -70,6 +72,7 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Don't Smack the Potato</h1>
   <div class="counter" id="counter">Despite how Smackable it looks!</div>
@@ -82,41 +85,34 @@
     <li><i><a href="#">"don't fall for it's smackalicious crunchiness"</a></i></li>
   </ul>
 
-  <audio id="smackSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/smack.mp3"></audio>
-  <audio id="dingSound" src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/ding.mp3"></audio>
+  <audio id="smackSound"
+    src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/smack.mp3"></audio>
+  <audio id="dingSound"
+    src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/ding.mp3"></audio>
 
   <script>
     let counter = 0;
     let previous_integral_part = 0;
     let dialogue_prefix_text = "";
     let prefix_text_list_history = [];
-    let rotationDirection = 1; // alternates +1 / -1
+    let rotationDirection = 1; // alternates +1/-1
+
     const potato = document.getElementById("potato");
 
-    // Unified input listener for both click and tap
-    function addUnifiedInputListener(element, callback) {
-      let touchTriggered = false;
-
-      element.addEventListener("touchstart", e => {
-        touchTriggered = true;
-        callback(e);
-      }, { passive: true });
-
-      element.addEventListener("click", e => {
-        if (touchTriggered) {
-          touchTriggered = false; // reset
-          return; // skip duplicate click
-        }
-        callback(e);
-      });
+    // ✅ Single unified event — no double counting anywhere
+    if (window.PointerEvent) {
+      potato.addEventListener("pointerdown", incrementCounter, { passive: true });
+    } else {
+      // very old fallback
+      potato.addEventListener("touchstart", incrementCounter, { passive: true });
+      potato.addEventListener("click", incrementCounter);
     }
-
-    addUnifiedInputListener(potato, incrementCounter);
 
     function incrementCounter() {
       counter++;
-      let counter_text = "You Smacked the Potato " + counter + " times!";
-      if (counter === 1) counter_text = "You Smacked the Potato!";
+      let counter_text = counter === 1
+        ? "You Smacked the Potato!"
+        : `You Smacked the Potato ${counter} times!`;
 
       const prefix_text_list = [
         "My Goodness! ",
@@ -156,40 +152,34 @@
       if (current_integral_part !== previous_integral_part) {
         previous_integral_part = current_integral_part;
 
-        while (true) {
+        do {
           dialogue_prefix_text = prefix_text_list[Math.floor(Math.random() * prefix_text_list.length)];
-          if (prefix_text_list_history.length === 0) break;
-          let is_dialogue_old = prefix_text_list_history.includes(dialogue_prefix_text);
-          if (!is_dialogue_old) break;
-        }
+        } while (prefix_text_list_history.includes(dialogue_prefix_text) && prefix_text_list_history.length < prefix_text_list.length);
 
         prefix_text_list_history.push(dialogue_prefix_text);
         if (prefix_text_list_history.length > 5) prefix_text_list_history.shift();
-
         playDingSound();
       }
 
-      document.getElementById('counter').textContent = dialogue_prefix_text + counter_text;
+      document.getElementById('counter').textContent =
+        dialogue_prefix_text + counter_text;
+
       playSmackSound();
       animatePotato();
     }
 
     function playSmackSound() {
-      const audio = document.getElementById('smackSound');
-      audio.currentTime = 0;
-      audio.play();
+      const a = document.getElementById('smackSound');
+      a.currentTime = 0; a.play();
     }
 
     function playDingSound() {
-      const audio = document.getElementById('dingSound');
-      audio.currentTime = 0;
-      audio.play();
+      const a = document.getElementById('dingSound');
+      a.currentTime = 0; a.play();
     }
 
     function animatePotato() {
       const rock = document.querySelector('.rock-container');
-
-      // Alternate rotation: +5° / -5° each smack
       rotationDirection *= -1;
       const rotation = rotationDirection * 5;
 
@@ -202,4 +192,5 @@
     }
   </script>
 </body>
+
 </html>
