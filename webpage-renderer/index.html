@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <title>Webpage Renderer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webpage Renderer</title>
   <style>
     :root {
       --bg: #0f0f10;
@@ -14,14 +13,16 @@
       --sep: #222;
       --thumb: #444;
       --thumbHover: #666;
+      --log-bg: #111;
+      --log-border: #222;
+      --log-fg: #eee;
+      --log-warn: #ffaa00;
+      --log-error: #ff5555;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html,
-    body {
+    html, body {
       height: 100%;
       margin: 0;
       background: var(--bg);
@@ -54,9 +55,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    #toggleBtn:active {
-      filter: brightness(0.95);
-    }
+    #toggleBtn:active { filter: brightness(0.95); }
 
     .separator {
       height: 4px;
@@ -75,7 +74,6 @@
     #editor {
       width: 100%;
       min-height: 50vh;
-      /* fallback minimum height */
       border: none;
       outline: none;
       padding: 12px;
@@ -85,39 +83,18 @@
       caret-color: var(--fg);
       resize: none;
       tab-size: 2;
-
-      /* ✅ Wrapping and no scrollbar */
       white-space: pre-wrap;
       word-wrap: break-word;
       overflow-wrap: break-word;
       overflow: hidden;
     }
 
-    /* Dark scrollbar styling */
-    #editor::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
+    #editor::-webkit-scrollbar { width: 10px; height: 10px; }
+    #editor::-webkit-scrollbar-track { background: var(--bg); }
+    #editor::-webkit-scrollbar-thumb { background: var(--thumb); border-radius: 6px; }
+    #editor::-webkit-scrollbar-thumb:hover { background: var(--thumbHover); }
+    #editor { scrollbar-width: thin; scrollbar-color: var(--thumb) var(--bg); }
 
-    #editor::-webkit-scrollbar-track {
-      background: var(--bg);
-    }
-
-    #editor::-webkit-scrollbar-thumb {
-      background: var(--thumb);
-      border-radius: 6px;
-    }
-
-    #editor::-webkit-scrollbar-thumb:hover {
-      background: var(--thumbHover);
-    }
-
-    #editor {
-      scrollbar-width: thin;
-      scrollbar-color: var(--thumb) var(--bg);
-    }
-
-    /* Preview iframe */
     #preview {
       width: 100%;
       height: 100%;
@@ -126,18 +103,41 @@
       background: white;
     }
 
-    /* Fade transition (optional) */
-    .fade {
-      transition: opacity 120ms ease;
+    /* Console panel */
+    #logContainer {
+      display: none;
+      background: var(--log-bg);
+      color: var(--log-fg);
+      font-family: monospace;
+      font-size: 13px;
+      padding: 8px;
+      border-top: 2px solid var(--log-border);
+      max-height: 25vh;
+      overflow-y: auto;
     }
 
-    .hidden {
-      opacity: 0;
-      pointer-events: none;
+    #logTitle {
+      color: #aaa;
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      border-bottom: 1px solid var(--log-border);
+      padding: 2px 0;
+      white-space: pre-wrap;
+    }
+
+    .log-warn { color: var(--log-warn); }
+    .log-error { color: var(--log-error); }
+
+    .timestamp {
+      color: #888;
+      margin-right: 6px;
     }
   </style>
 </head>
-
 <body>
   <div class="toolbar">
     <button id="toggleBtn">Switch to Render</button>
@@ -145,7 +145,12 @@
   </div>
 
   <div class="work">
-    <textarea id="editor" class="fade" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+    <textarea
+      id="editor"
+      spellcheck="false"
+      autocapitalize="off"
+      autocomplete="off"
+      autocorrect="off"
       wrap="off"><!DOCTYPE html>
 <html>
 <head>
@@ -160,35 +165,41 @@
 <body>
   <h1>Hello World</h1>
   <p>This is a test! Tap the button to see console output.</p>
-  <button onclick="alert('Hi!'); console.log('Clicked!')">Click me</button>
+  <button onclick="console.log('Button clicked!'); console.warn('Warning example'); console.error('Error example')">Click me</button>
   <script>
-    console.log("JS in the rendered page is running.");
+    console.log("JS inside rendered page is running.");
   </script>
 </body>
 </html></textarea>
 
-    <iframe id="preview" class="fade"></iframe>
+    <iframe id="preview"></iframe>
+  </div>
+
+  <div id="logContainer">
+    <div id="logTitle">Console Output</div>
+    <div id="logOutput"></div>
   </div>
 
   <script>
     const editor = document.getElementById('editor');
     const preview = document.getElementById('preview');
     const toggleBtn = document.getElementById('toggleBtn');
+    const logContainer = document.getElementById('logContainer');
+    const logOutput = document.getElementById('logOutput');
     let showingCode = true;
 
-    // ✅ Auto-resize the editor to fit content + half window height
+    // Auto-resize editor (with half-window padding)
     function adjustEditorHeight() {
       editor.style.height = 'auto';
       const contentHeight = editor.scrollHeight;
       const halfWindow = window.innerHeight / 2;
       editor.style.height = contentHeight + halfWindow + 'px';
     }
-
     editor.addEventListener('input', adjustEditorHeight);
     window.addEventListener('resize', adjustEditorHeight);
     window.addEventListener('load', adjustEditorHeight);
 
-    // ✅ Make TAB insert spaces
+    // Make TAB insert spaces
     editor.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') {
         e.preventDefault();
@@ -199,15 +210,78 @@
       }
     });
 
-    // ✅ Toggle between Code and Render modes
+    // Format time like HH:MM:SS
+    function timestamp() {
+      const d = new Date();
+      return d.toLocaleTimeString('en-US', { hour12: false });
+    }
+
+    // Log helpers
+    function addLog(msg, type = 'log') {
+      const div = document.createElement('div');
+      div.className = 'log-entry log-' + type;
+      const ts = document.createElement('span');
+      ts.className = 'timestamp';
+      ts.textContent = `[${timestamp()}]`;
+      div.appendChild(ts);
+      div.appendChild(document.createTextNode(` [${type.toUpperCase()}] ${msg}`));
+      logOutput.appendChild(div);
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+    function clearLogs() { logOutput.innerHTML = ''; }
+
+    // Listen for messages from the iframe
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.source === 'iframe-console') {
+        addLog(e.data.message, e.data.type);
+      }
+    });
+
+    // Toggle code ↔ render
     toggleBtn.addEventListener('click', () => {
       if (showingCode) {
-        preview.srcdoc = editor.value;
+        clearLogs();
+        const userCode = editor.value;
+
+        // Create a wrapper HTML that intercepts console messages
+        const wrapped = `
+<!DOCTYPE html>
+<html>
+<head><base target="_blank"></head>
+<body>
+${userCode}
+<script>
+(function(){
+  const send = (type, ...args) => {
+    window.parent.postMessage(
+      { source: 'iframe-console', type, message: args.map(a => String(a)).join(' ') },
+      '*'
+    );
+  };
+  ['log','error','warn'].forEach(fn=>{
+    const orig = console[fn];
+    console[fn] = (...args)=>{ send(fn, ...args); orig.apply(console,args); };
+  });
+  window.onerror = (msg, src, line, col, err) => {
+    send('error', msg + ' at ' + line + ':' + col);
+  };
+})();
+<\/script>
+</body>
+</html>`;
+
+        // Show rendered view
+        const blob = new Blob([wrapped], { type: 'text/html' });
+        preview.src = URL.createObjectURL(blob);
+
         editor.style.display = 'none';
         preview.style.display = 'block';
+        logContainer.style.display = 'block';
         toggleBtn.textContent = 'Switch to Code';
       } else {
+        // Return to code view
         preview.style.display = 'none';
+        logContainer.style.display = 'none';
         editor.style.display = 'block';
         toggleBtn.textContent = 'Switch to Render';
         adjustEditorHeight();
@@ -216,5 +290,4 @@
     });
   </script>
 </body>
-
 </html>
