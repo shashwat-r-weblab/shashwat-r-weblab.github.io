@@ -41,7 +41,6 @@
     .potato {
       width: 350px;
       height: 350px;
-      /* background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png') center/cover; */
     }
 
     .counter {
@@ -85,7 +84,8 @@
   </ul>
 
   <script>
-    /* --------------------  AUDIO ENGINE  -------------------- */
+    /* --------------------  AUDIO ENGINE (with warmAudio) -------------------- */
+    let audioLoaded = false
     let audioCtx;
     let smackBuffer, dingBuffer;
     const smackURL = "https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/smack.mp3";
@@ -97,6 +97,32 @@
       return await audioCtx.decodeAudioData(arr);
     }
 
+    // 🔥 Warm AudioContext and pre-decode buffers
+    async function warmAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+
+      // Silent tick to wake the hardware audio thread
+      const empty = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      const tick = audioCtx.createBufferSource();
+      tick.buffer = empty;
+      tick.connect(audioCtx.destination);
+      tick.start();
+
+      // Decode both buffers in parallel
+      [smackBuffer, dingBuffer] = await Promise.all([
+        fetchAndDecode(smackURL),
+        fetchAndDecode(dingURL)
+      ]);
+
+      console.log("Audio warmed and ready");
+      // document.getElementsByTagName("h1")[0].textContent = "Psych! Ready"
+    }
+
     function playBuffer(buffer) {
       if (!audioCtx || !buffer) return;
       const src = audioCtx.createBufferSource();
@@ -106,51 +132,51 @@
     }
 
     /* --------------------  GAME LOGIC  -------------------- */
-    let counter = -2;
-    let previous_integral_part = 0;
+    // let counter = -2;
+    // let previous_integral_part = 0;
+    let counter = -1;
+    let previous_integral_part = -1;
     let dialogue_prefix_text = "";
     let prefix_text_list_history = [];
     let rotationDirection = 1; // alternates +1/-1
 
     const potato = document.getElementById("potato");
-    potato.style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
     potato.style.backgroundSize = "cover";
+    potato.style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
+    document.getElementById('counter').textContent = "The potato is bandaged up inside.";
 
-    // ✅ Fully mobile-safe audio init + resume
+    // ✅ Warm audio engine on first gesture
     potato.addEventListener("pointerdown", async () => {
+      if (audioLoaded) {
+        incrementCounter()
+      }
+      else {
+        // document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-bandaid.png')";
+        document.getElementById('counter').textContent = "Let it rest soundly. It wouldn't be right to disturb it.";
+      }
+
       try {
-        // Create or resume AudioContext inside user gesture
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          console.log("AudioContext created");
-        }
-        if (audioCtx.state === "suspended") {
+        if (!audioCtx || !smackBuffer || !dingBuffer) {
+          await warmAudio();   // pre-warm + pre-decode
+        } else if (audioCtx.state === "suspended") {
           await audioCtx.resume();
-          console.log("AudioContext resumed");
         }
-
-        // Lazy-load buffers on first gesture (after context runs)
-        if (!smackBuffer || !dingBuffer) {
-          smackBuffer = await fetchAndDecode(smackURL);
-          dingBuffer = await fetchAndDecode(dingURL);
-          console.log("Audio decoded and ready");
-        }
-
-        // document.getElementsByTagName("h1")[0].textContent = "Don't Smack the Potato (sound on)"
-
-        incrementCounter();
+        audioLoaded = true
+        // incrementCounter();
       } catch (err) {
         console.error("Audio init error:", err);
-
-        // document.getElementsByTagName("h1")[0].textContent = "Don't Smack the Potato (sound off)"
       }
     }, { passive: true });
 
     function incrementCounter() {
+      // document.getElementsByTagName("h1")[0].textContent = "Psych! " + counter
       counter++;
-      const counter_text = counter === 1
-        ? "You Smacked the Potato!"
-        : `You Smacked the Potato ${counter} times!`;
+      var counter_text = ""
+      if (counter === 1) {counter_text = "You Smacked the Potato!"}
+      else if (counter > 1) {counter_text = `You Smacked the Potato ${counter} times!`}
+      // const counter_text = counter === 1
+      //   ? "You Smacked the Potato!"
+      //   : `You Smacked the Potato ${counter} times!`;
 
       const prefix_text_list = [
         "My Goodness! ",
@@ -194,31 +220,47 @@
         } while (prefix_text_list_history.includes(dialogue_prefix_text) && prefix_text_list_history.length < prefix_text_list.length);
         prefix_text_list_history.push(dialogue_prefix_text);
         if (prefix_text_list_history.length > 5) prefix_text_list_history.shift();
-        playBuffer(dingBuffer);
+        if (counter >= 0) {playBuffer(dingBuffer);}
       }
 
-      if (counter <= -2) {
-          document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
-          document.getElementById('potato').style.backgroundSize = "cover";
-          document.getElementById('counter').textContent =
-          "The potato is resting soundly. It wouldn't be right to disturb it.";
-      }
-      else if (counter == -1) {
+      // if (counter <= -2) {
+      //   document.getElementById('potato').style.backgroundImage =
+      //     "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
+      //   document.getElementById('counter').textContent =
+      //     "The potato is resting soundly. It wouldn't be right to disturb it.";
+      // } else if (counter == -1) {
+      //   document.getElementById('potato').style.backgroundImage =
+      //     "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-bandaid.png')";
+      //   document.getElementById('counter').textContent =
+      //     "Look at it all bandaged up. You wouldn't want to remove it would you?";
+      // } else if (counter == 0) {
+      if (counter >= 0 && counter < 25) {
+        if (counter == 0) {
           document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-bandaid.png')";
-          document.getElementById('potato').style.backgroundSize = "cover";
-          document.getElementById('counter').textContent =
-          "Look at it all bandaged up. You wouldn't want to remove it would you?";
+          document.getElementById('counter').textContent = "What are you doing? Look how hurt it is!";
+        }
+        else if (counter < 10) {
+          document.getElementById('counter').textContent = "Stop it, it's bandage will drop off. " + counter_text;
+          playBuffer(smackBuffer);
+          animatePotato();
+        }
+        else {
+          if (counter == 10) {
+            document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png')";
+            playBuffer(dingBuffer);
+          }
+          document.getElementById('counter').textContent = "Look what you did! Poor Potato." + counter_text;
+          playBuffer(smackBuffer);
+          animatePotato();
+        }
       }
-      else if (counter == 0) {
-          document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png')";
-          document.getElementById('potato').style.backgroundSize = "cover";
-          document.getElementById('counter').textContent =
-          "Careful now, however tempted you are, Do Not Smack the Potato";
+      else if (counter >= 25 && counter < 50) {
+        document.getElementById('counter').textContent = "Why are you doing this? " + counter_text;
+        playBuffer(smackBuffer);
+        animatePotato();
       }
-      else if (counter >= 1) {
-        document.getElementById('counter').textContent =
-          dialogue_prefix_text + counter_text;
-
+      else {
+        document.getElementById('counter').textContent = dialogue_prefix_text + counter_text;
         playBuffer(smackBuffer);
         animatePotato();
       }
