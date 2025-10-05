@@ -5,9 +5,6 @@
   <meta charset="UTF-8" />
   <title>Webpage Renderer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon"
-    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/webpage-renderer/tab-icon.png"
-    type="image/png">
   <style>
     :root {
       --bg: #0f0f10;
@@ -72,13 +69,13 @@
       display: grid;
       grid-template-rows: 1fr;
       min-height: 0;
-      /* allow children to shrink in flex/grids */
     }
 
     /* Plain textarea editor */
     #editor {
       width: 100%;
-      height: 100%;
+      min-height: 50vh;
+      /* fallback minimum height */
       border: none;
       outline: none;
       padding: 12px;
@@ -88,16 +85,15 @@
       caret-color: var(--fg);
       resize: none;
       tab-size: 2;
-      white-space: pre;
-      overflow-wrap: normal;
-      word-wrap: normal;
-      -webkit-text-size-adjust: 100%;
-      -webkit-font-smoothing: antialiased;
-      overscroll-behavior: contain;
-      touch-action: manipulation;
+
+      /* ✅ Wrapping and no scrollbar */
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      overflow: hidden;
     }
 
-    /* Dark scrollbars for editor */
+    /* Dark scrollbar styling */
     #editor::-webkit-scrollbar {
       width: 10px;
       height: 10px;
@@ -127,12 +123,10 @@
       height: 100%;
       border: none;
       display: none;
-      /* start hidden */
       background: white;
-      /* so empty pages aren’t dark by default */
     }
 
-    /* Simple fade when toggling (optional, feels nice) */
+    /* Fade transition (optional) */
     .fade {
       transition: opacity 120ms ease;
     }
@@ -182,21 +176,32 @@
     const toggleBtn = document.getElementById('toggleBtn');
     let showingCode = true;
 
-    // Make TAB insert spaces (or a tab) in the textarea
+    // ✅ Auto-resize the editor to fit content + half window height
+    function adjustEditorHeight() {
+      editor.style.height = 'auto';
+      const contentHeight = editor.scrollHeight;
+      const halfWindow = window.innerHeight / 2;
+      editor.style.height = contentHeight + halfWindow + 'px';
+    }
+
+    editor.addEventListener('input', adjustEditorHeight);
+    window.addEventListener('resize', adjustEditorHeight);
+    window.addEventListener('load', adjustEditorHeight);
+
+    // ✅ Make TAB insert spaces
     editor.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') {
         e.preventDefault();
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
-        const indent = '  '; // set to '\t' if you prefer tabs
+        const indent = '  ';
         editor.setRangeText(indent, start, end, 'end');
       }
     });
 
-    // Toggle Code ↔ Render
+    // ✅ Toggle between Code and Render modes
     toggleBtn.addEventListener('click', () => {
       if (showingCode) {
-        // Render the code into the iframe
         preview.srcdoc = editor.value;
         editor.style.display = 'none';
         preview.style.display = 'block';
@@ -205,6 +210,7 @@
         preview.style.display = 'none';
         editor.style.display = 'block';
         toggleBtn.textContent = 'Switch to Render';
+        adjustEditorHeight();
       }
       showingCode = !showingCode;
     });
