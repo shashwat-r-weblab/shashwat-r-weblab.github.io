@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Potato Smacker</title>
   <link rel="icon"
-    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/tab-icon.png"
+    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-icon64.png"
     type="image/png">
   <style>
     html,
@@ -14,7 +14,7 @@
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
-      background-color: #121212;
+      background: #121212;
       color: #fff;
       display: flex;
       flex-direction: column;
@@ -31,18 +31,17 @@
       margin-bottom: 20px;
     }
 
-    .rock-container {
+    .potato-container {
       position: relative;
       display: inline-block;
       cursor: pointer;
       transition: transform 0.05s ease;
     }
 
-    .rock {
+    .potato {
       width: 350px;
       height: 350px;
-      background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png') center/cover;
-      /* border-radius: 50%; */
+      /* background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png') center/cover; */
     }
 
     .counter {
@@ -75,23 +74,39 @@
 
 <body>
   <h1>Don't Smack the Potato</h1>
-  <div class="counter" id="counter">Despite how Smackable it looks!</div>
+  <div class="counter" id="counter">The potato is resting soundly. It wouldn't be right to disturb it.</div>
 
-  <div class="rock-container" id="potato">
-    <div class="rock"></div>
+  <div class="potato-container" id="potato">
+    <div class="potato"></div>
   </div>
 
   <ul class="link-list">
-    <li><i><a href="#">"don't fall for it's smackalicious crunchiness"</a></i></li>
+    <li><i><a href="#">"don't fall for its smackalicious crunchiness"</a></i></li>
   </ul>
 
-  <audio id="smackSound"
-    src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/smack.mp3"></audio>
-  <audio id="dingSound"
-    src="https://github.com/shashwat-r-weblab/shashwat-r-weblab.github.io/raw/refs/heads/main/potato-smacker/ding.mp3"></audio>
-
   <script>
-    let counter = 0;
+    /* --------------------  AUDIO ENGINE  -------------------- */
+    let audioCtx;
+    let smackBuffer, dingBuffer;
+    const smackURL = "https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/smack.mp3";
+    const dingURL = "https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/ding.mp3";
+
+    async function fetchAndDecode(url) {
+      const res = await fetch(url);
+      const arr = await res.arrayBuffer();
+      return await audioCtx.decodeAudioData(arr);
+    }
+
+    function playBuffer(buffer) {
+      if (!audioCtx || !buffer) return;
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(audioCtx.destination);
+      src.start();
+    }
+
+    /* --------------------  GAME LOGIC  -------------------- */
+    let counter = -2;
     let previous_integral_part = 0;
     let dialogue_prefix_text = "";
     let prefix_text_list_history = [];
@@ -99,18 +114,39 @@
 
     const potato = document.getElementById("potato");
 
-    // ✅ Single unified event — no double counting anywhere
-    if (window.PointerEvent) {
-      potato.addEventListener("pointerdown", incrementCounter, { passive: true });
-    } else {
-      // very old fallback
-      potato.addEventListener("touchstart", incrementCounter, { passive: true });
-      potato.addEventListener("click", incrementCounter);
-    }
+    // ✅ Fully mobile-safe audio init + resume
+    potato.addEventListener("pointerdown", async () => {
+      try {
+        // Create or resume AudioContext inside user gesture
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          console.log("AudioContext created");
+        }
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+          console.log("AudioContext resumed");
+        }
+
+        // Lazy-load buffers on first gesture (after context runs)
+        if (!smackBuffer || !dingBuffer) {
+          smackBuffer = await fetchAndDecode(smackURL);
+          dingBuffer = await fetchAndDecode(dingURL);
+          console.log("Audio decoded and ready");
+        }
+
+        // document.getElementsByTagName("h1")[0].textContent = "Don't Smack the Potato (sound on)"
+
+        incrementCounter();
+      } catch (err) {
+        console.error("Audio init error:", err);
+
+        // document.getElementsByTagName("h1")[0].textContent = "Don't Smack the Potato (sound off)"
+      }
+    }, { passive: true });
 
     function incrementCounter() {
       counter++;
-      let counter_text = counter === 1
+      const counter_text = counter === 1
         ? "You Smacked the Potato!"
         : `You Smacked the Potato ${counter} times!`;
 
@@ -151,43 +187,49 @@
       const current_integral_part = Math.floor(counter / 25);
       if (current_integral_part !== previous_integral_part) {
         previous_integral_part = current_integral_part;
-
         do {
           dialogue_prefix_text = prefix_text_list[Math.floor(Math.random() * prefix_text_list.length)];
         } while (prefix_text_list_history.includes(dialogue_prefix_text) && prefix_text_list_history.length < prefix_text_list.length);
-
         prefix_text_list_history.push(dialogue_prefix_text);
         if (prefix_text_list_history.length > 5) prefix_text_list_history.shift();
-        playDingSound();
+        playBuffer(dingBuffer);
       }
 
-      document.getElementById('counter').textContent =
-        dialogue_prefix_text + counter_text;
+      if (counter <= -2) {
+          document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
+          document.getElementById('potato').style.backgroundSize = "cover";
+          document.getElementById('counter').textContent =
+          "The potato is resting soundly. It wouldn't be right to disturb it.";
+      }
+      else if (counter == -1) {
+          document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-bandaid.png')";
+          document.getElementById('potato').style.backgroundSize = "cover";
+          document.getElementById('counter').textContent =
+          "Look at it all bandaged up. You wouldn't want to remove it would you?";
+      }
+      else if (counter == 0) {
+          document.getElementById('potato').style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png')";
+          document.getElementById('potato').style.backgroundSize = "cover";
+          document.getElementById('counter').textContent =
+          "Careful now, however tempted you are, Do Not Smack the Potato";
+      }
+      else if (counter >= 1) {
+        document.getElementById('counter').textContent =
+          dialogue_prefix_text + counter_text;
 
-      playSmackSound();
-      animatePotato();
-    }
-
-    function playSmackSound() {
-      const a = document.getElementById('smackSound');
-      a.currentTime = 0; a.play();
-    }
-
-    function playDingSound() {
-      const a = document.getElementById('dingSound');
-      a.currentTime = 0; a.play();
+        playBuffer(smackBuffer);
+        animatePotato();
+      }
     }
 
     function animatePotato() {
-      const rock = document.querySelector('.rock-container');
+      const potatoElem = document.querySelector('.potato-container');
       rotationDirection *= -1;
       const rotation = rotationDirection * 5;
-
-      rock.style.transition = 'transform 0.05s ease';
-      rock.style.transform = `scale(1.1) rotate(${rotation}deg)`;
-
+      potatoElem.style.transition = 'transform 0.05s ease';
+      potatoElem.style.transform = `scale(1.1) rotate(${rotation}deg)`;
       setTimeout(() => {
-        rock.style.transform = `scale(1.0) rotate(0deg)`;
+        potatoElem.style.transform = `scale(1.0) rotate(0deg)`;
       }, 150);
     }
   </script>
