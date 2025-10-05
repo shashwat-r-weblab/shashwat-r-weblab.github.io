@@ -41,7 +41,7 @@
     .potato {
       width: 350px;
       height: 350px;
-      /* background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato.png') center/cover; */
+      /* background: url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png') center/cover; */
     }
 
     .counter {
@@ -113,6 +113,8 @@
     let rotationDirection = 1; // alternates +1/-1
 
     const potato = document.getElementById("potato");
+    potato.style.backgroundImage = "url('https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/potato-smacker/potato-quilt.png')";
+    potato.style.backgroundSize = "cover";
 
     // ✅ Fully mobile-safe audio init + resume
     potato.addEventListener("pointerdown", async () => {
