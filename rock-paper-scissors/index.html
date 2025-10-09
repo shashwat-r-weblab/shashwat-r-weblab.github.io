@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Adaptive Rock Paper Scissors</title>
+  <link rel="icon"
+    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/rock-paper-scissors/tab-icon.png"
+    type="image/png">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      /* disable text selection */
+    }
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      font-family: Arial, sans-serif;
+      background: orange;
+      touch-action: manipulation;
+      /* prevent double-tap zoom */
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Height distribution + colors */
+    .panel1 {
+      height: 15%;
+      background: #e67300;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 10px;
+    }
+    /* darker orange */
+    .panel2 {
+      height: 15%;
+      background: orange;
+    }
+
+    .panel3 {
+      height: 25%;
+      background: #fff3e0;
+    }
+
+    .panel4 {
+      height: 25%;
+      background: #fff3e0;
+    }
+
+    .panel5 {
+      height: 20%;
+      background: orange;
+    }
+
+    .title-wrapper {
+      flex: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .title-text {
+      font-size: 2em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-align: center;
+      color: white;
+      width: 100%;
+    }
+
+    /* Three-column wrapper for top panel */
+    .top-cols {
+      width: 100%;
+      height: 100%;
+      max-width: 900px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 15px; /* spacing between title and button */
+    }
+
+    /* Prediction toggle button */
+    #toggle-predictions {
+      flex: 1;
+      max-width: 200px;
+      font-size: 1em;
+      font-weight: bold;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.15s transform, 0.15s background;
+      align-self: center;
+    }
+
+    #toggle-predictions:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(1.03);
+    }
+
+    #toggle-predictions:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Active (ON) state */
+    #toggle-predictions.on {
+      background: rgba(255, 255, 255, 0.6);
+      color: #222;
+      font-weight: bold;
+    }
+
+    .three-cols {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .col {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Buttons - slightly lighter background */
+    button {
+      width: 95%;
+      height: 90%;
+      font-size: 1.1em;
+      font-weight: bold;
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.15s transform, 0.15s background;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(1.03);
+    }
+
+    button:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    button.predicted {
+      text-decoration: underline;
+      text-underline-offset: 4px; /* visually nicer */
+    }
+
+    /* Score display */
+    .score-display {
+      text-align: center;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* total games line above scores */
+    .score-sub {
+      font-size: 1em;
+      opacity: 0.9;
+      margin-bottom: 6px;
+      /* space below total line */
+    }
+
+    /* main score section with emojis */
+    .score-main {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 48px;
+      /* consistent spacing from buttons */
+      padding: 6px 0;
+      /* small vertical padding for balance */
+      font-size: 1.3em;
+      /* slightly smaller than before */
+      font-weight: bold;
+    }
+
+    /* each side (🙂 / 💻) */
+    .score-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* emoji size */
+    .score-emoji {
+      font-size: 1.8em;
+      line-height: 1em;
+    }
+
+    /* score number under emoji */
+    .score-number {
+      font-size: 1.3em;
+      /* slightly smaller than before */
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    /* Slot for displaying moves */
+    .image-slot {
+      width: 250px;
+      height: 200px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .move-symbol {
+      font-size: 3.5em;
+      line-height: 1.1em;
+    }
+
+    .move-text {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin-top: 10px;
+      color: #333;
+    }
+
+    .winner {
+      background: orange !important;
+      color: white !important;
+    }
+
+    /* mobile adjustments */
+    @media (max-width: 700px) {
+      .score-main {
+        gap: 32px;
+        padding: 4px 0;
+      }
+
+      .score-emoji {
+        font-size: 1.5em;
+      }
+
+      .score-number {
+        font-size: 1.1em;
+      }
+
+      .score-sub {
+        font-size: 0.9em;
+        margin-bottom: 4px;
+      }
+
+      .image-slot {
+        width: 150px;
+        height: 150px;
+      }
+
+      .move-symbol {
+        font-size: 2.5em;
+      }
+
+      .move-text {
+        font-size: 1.1em;
+      }
+
+      .title-text {
+        font-size: 1.5em;
+      }
+
+      #toggle-predictions {
+        font-size: 0.9em;
+        padding: 6px 10px;
+        max-width: 150px;
+      }
+
+      button {
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Panel 1: Title and Predictions Button -->
+  <div class="panel panel1">
+    <div class="title-wrapper">
+      <div class="title-text">Adaptive Rock Paper Scissors</div>
+    </div>
+    <button id="toggle-predictions">View Predictions</button>
+  </div>
+
+  <!-- Panel 2: Forget / Score / Restart -->
+  <div class="panel panel2">
+    <div class="three-cols">
+      <div class="col"><button id="reset-btn">No Moves In History</button></div>
+      <div class="col">
+        <div class="score-display" id="score-display">
+          <div class="score-main">Play</div>
+        </div>
+      </div>
+      <div class="col"><button id="restart-btn">Restart Game</button></div>
+    </div>
+  </div>
+
+  <!-- Panel 3: AI move -->
+  <div class="panel panel3">
+    <div class="image-slot" id="ai-slot">
+      <div class="move-symbol">💻</div>
+      <div class="move-text">Computer Move</div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Human move -->
+  <div class="panel panel4">
+    <div class="image-slot" id="human-slot">
+      <div class="move-symbol">🙂</div>
+      <div class="move-text">Your Move</div>
+    </div>
+  </div>
+
+  <!-- Panel 5: Move selection -->
+  <div class="panel panel5">
+    <div class="three-cols">
+      <div class="col"><button id="rock-btn">Rock</button></div>
+      <div class="col"><button id="paper-btn">Paper</button></div>
+      <div class="col"><button id="scissor-btn">Scissors</button></div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================
+       INITIAL SETUP
+    ========================== */
+
+    // Create dictionary with 27 keys of r/p/s combinations
+    const moves = ['r', 'p', 's'];
+    let moveMemory = {};
+    for (let a of moves) {
+      for (let b of moves) {
+        for (let c of moves) {
+          moveMemory[a + b + c] = { "success": 0, "failure": 0 };
+        }
+      }
+    }
+
+    // Game variables
+    let viewPredictionsOn = false;
+    let last_human_move = null;
+    let last_ai_move = null;
+    let predicted_human_move = null;
+    let current_human_move = null;
+    let current_ai_move = null;
+
+    let human_score = 0;
+    let ai_score = 0;
+    let total_plays = 0;
+
+    const scoreDisplay = document.getElementById("score-display");
+    const aiSlot = document.getElementById("ai-slot");
+    const humanSlot = document.getElementById("human-slot");
+    const resetBtn = document.getElementById("reset-btn");
+    const toggleBtn = document.getElementById("toggle-predictions");
+
+    /* ==========================
+       SCORE UPDATE FUNCTION
+    ========================== */
+
+    function updateScoreDisplay(humanMove, aiMove) {
+      let winner = "draw";
+      if (humanMove === aiMove) winner = "draw";
+      else if (
+        (humanMove === 'r' && aiMove === 's') ||
+        (humanMove === 'p' && aiMove === 'r') ||
+        (humanMove === 's' && aiMove === 'p')
+      ) {
+        human_score++;
+        winner = "human";
+      } else {
+        ai_score++;
+        winner = "ai";
+      }
+
+      // Update display with two lines: score + total games
+      scoreDisplay.innerHTML = `
+        <div class="score-sub">${human_score + ai_score} games</div>
+        <div class="score-main">
+          <div class="score-side">
+            <div class="score-emoji">💻</div>
+            <div class="score-number">${ai_score}</div>
+          </div>
+          <div class="score-side">
+            <div class="score-emoji">🙂</div>
+            <div class="score-number">${human_score}</div>
+          </div>
+        </div>
+      `;
+
+      resetBtn.textContent = total_plays === 0
+        ? "No Moves In History"
+        : `Forget ${total_plays} Move History`;
+
+      highlightWinner(winner);
+    }
+
+    /* ==========================
+       AI PREDICTION (THOMPSON SAMPLING)
+    ========================== */
+
+    function predictHumanMove() {
+      const randomMove = moves[Math.floor(Math.random() * moves.length)];
+      if (!last_human_move || !last_ai_move) return randomMove;
+
+      const probMove = {};
+      for (let m of moves) {
+        const key = last_human_move + last_ai_move + m;
+        const s = moveMemory[key]["success"];
+        const f = moveMemory[key]["failure"];
+        probMove[m] = getThompsonSamplingProb(s, f);
+      }
+
+      // Pick human move with max Thompson sample
+      const bestMove = Object.entries(probMove).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+      return bestMove || randomMove;
+    }
+
+    /* ==========================
+       BETA DISTRIBUTION UTILITIES
+    ========================== */
+
+
+    // Slow but Simple Beta Function Formula for Validation
+    function betaFormulaSimple(s, f, x) {
+      if (x < 0 || x > 1) return 0.0; // outside range
+      let logResult = 0.0;
+      for (let i = 1.0; i <= s + f + 1; i++) logResult += Math.log(i);
+      for (let i = 1.0; i <= s; i++) logResult -= Math.log(i);
+      for (let i = 1.0; i <= f; i++) logResult -= Math.log(i);
+      logResult += s * Math.log(x);
+      logResult += f * Math.log(1 - x);
+      result = Math.exp(logResult);
+      return isNaN(result) ? 0.0 : result;
+    }
+
+    function logGamma(z) {
+      // Lanczos approximation
+      const g = 7;
+      const p = [
+        0.99999999999980993,
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7
+      ];
+      if (z < 0.5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+      z -= 1;
+      let x = p[0];
+      for (let i = 1; i < g + 2; i++) x += p[i] / (z + i);
+      const t = z + g + 0.5;
+      return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+    }
+
+    function betaFormulaStable(s, f, x) {
+      if (x <= 0 || x >= 1) return 0.0; // outside range
+      const logCoeff = Math.log(s + f + 1)
+        + logGamma(s + f + 1)
+        - logGamma(s + 1)
+        - logGamma(f + 1);
+      const result = Math.exp(logCoeff + s * Math.log(x) + f * Math.log(1 - x));
+      return isNaN(result) ? 0.0 : result;
+    }
+
+    function getThompsonSamplingProb(s, f) {
+      const N = 200; // resolution
+      let totalWeight = 0.0;
+      const weights = [];
+
+      for (let i = 0; i <= N; i++) {
+        const x = i / N;
+        const w = betaFormulaStable(s, f, x);
+        weights.push(w);
+        totalWeight += w;
+      }
+
+      const r = Math.random() * totalWeight;
+      let cum = 0.0;
+      for (let i = 0; i <= N; i++) {
+        cum += weights[i];
+        if (r <= cum) return i / N;
+      }
+      return Math.random(); // fallback
+    }
+
+    /* ==========================
+       DISPLAY AND STYLE HELPERS
+    ========================== */
+
+    function moveSymbol(letter) {
+      return {
+        r: { emoji: "🪨", label: "Rock" },
+        p: { emoji: "📄", label: "Paper" },
+        s: { emoji: "✂️", label: "Scissors" }
+      }[letter] || { emoji: "❔", label: "" };
+    }
+
+    function updateMovePanels() {
+      // const aiData = moveSymbol(current_ai_move);
+      // const humanData = moveSymbol(current_human_move);
+      const aiData = moveSymbol(last_ai_move);
+      const humanData = moveSymbol(last_human_move);
+      aiSlot.innerHTML = `<div class="move-symbol">${aiData.emoji}</div><div class="move-text">${aiData.label}</div>`;
+      humanSlot.innerHTML = `<div class="move-symbol">${humanData.emoji}</div><div class="move-text">${humanData.label}</div>`;
+    }
+
+    function highlightWinner(winner) {
+      aiSlot.classList.remove("winner");
+      humanSlot.classList.remove("winner");
+      if (winner === "ai") aiSlot.classList.add("winner");
+      else if (winner === "human") humanSlot.classList.add("winner");
+    }
+
+    function highlightPredictedButton() {
+      if (viewPredictionsOn) {
+        const rockBtn = document.getElementById("rock-btn");
+        const paperBtn = document.getElementById("paper-btn");
+        const scissorBtn = document.getElementById("scissor-btn");
+
+        // Remove underline from all
+        [rockBtn, paperBtn, scissorBtn].forEach(btn =>
+          btn.classList.remove("predicted")
+        );
+
+        // Underline only the predicted one
+        if (predicted_human_move === "r") rockBtn.classList.add("predicted");
+        else if (predicted_human_move === "p") paperBtn.classList.add("predicted");
+        else if (predicted_human_move === "s") scissorBtn.classList.add("predicted");
+      } else {
+        // Remove underline if predictions are off
+        ["rock-btn", "paper-btn", "scissor-btn"].forEach(id =>
+          document.getElementById(id).classList.remove("predicted")
+        );
+      }
+    }
+
+    /* ==========================
+       COOKIE SAVE / LOAD FUNCTIONS
+    ========================== */
+
+    function saveToCookie() {
+      const data = {
+        viewPredictionsOn,
+        moveMemory,
+        last_human_move,
+        last_ai_move,
+        current_human_move,
+        current_ai_move,
+        predicted_human_move,
+        human_score,
+        ai_score,
+        total_plays
+      };
+      document.cookie = "rps_data=" + encodeURIComponent(JSON.stringify(data)) + ";path=/;max-age=604800";
+    }
+
+    function loadFromCookie() {
+      const cookies = document.cookie.split(";").map(c => c.trim());
+      const entry = cookies.find(c => c.startsWith("rps_data="));
+      if (!entry) return;
+      try {
+        const data = JSON.parse(decodeURIComponent(entry.split("=")[1]));
+        viewPredictionsOn = data.viewPredictionsOn;
+        if (data.moveMemory) moveMemory = data.moveMemory;
+        last_human_move = data.last_human_move;
+        last_ai_move = data.last_ai_move;
+        current_human_move = data.current_human_move;
+        current_ai_move = data.current_ai_move;
+        predicted_human_move = data.predicted_human_move;
+        human_score = data.human_score || 0;
+        ai_score = data.ai_score || 0;
+        total_plays = data.total_plays || 0;
+
+        if (human_score === 0 && ai_score === 0) {
+          scoreDisplay.innerHTML = `<div class="score-main">Play</div>`;
+          resetPanels();
+        } else {
+          scoreDisplay.innerHTML = `
+            <div class="score-sub">${human_score + ai_score} games</div>
+            <div class="score-main">
+              <div class="score-side">
+                <div class="score-emoji">💻</div>
+                <div class="score-number">${ai_score}</div>
+              </div>
+              <div class="score-side">
+                <div class="score-emoji">🙂</div>
+                <div class="score-number">${human_score}</div>
+              </div>
+            </div>
+          `;
+          updateMovePanels();
+        }
+        resetBtn.textContent =
+          total_plays === 0 ? "No Moves In History" : `Forget ${total_plays} Move History`;
+        if (viewPredictionsOn) toggleBtn.classList.toggle("on", viewPredictionsOn);
+      } catch (e) {
+        console.warn("Failed to load cookie:", e);
+      }
+    }
+
+    /* ==========================
+       BUTTON INTERACTIONS
+    ========================== */
+
+    // Toggle button logic
+    toggleBtn.onclick = () => {
+      viewPredictionsOn = !viewPredictionsOn;
+      toggleBtn.classList.toggle("on", viewPredictionsOn);
+      highlightPredictedButton();
+      saveToCookie();
+      console.log("View Predictions:", viewPredictionsOn);
+    };
+
+    function handleHumanMove(move) {
+      // Update game variables
+      total_plays++;
+      current_human_move = move;
+      current_ai_move = current_ai_move ? current_ai_move : moves[Math.floor(Math.random() * 3)];
+
+      // Update learning memory
+      if (last_human_move && last_ai_move && predicted_human_move) {
+        const predictedKey = last_human_move + last_ai_move + predicted_human_move;
+        const actualKey = last_human_move + last_ai_move + current_human_move;
+        moveMemory[actualKey]["success"] += 1;
+        if (predictedKey !== actualKey) moveMemory[predictedKey]["failure"] += 1;
+      }
+
+      // Shift move memory
+      last_human_move = current_human_move;
+      last_ai_move = current_ai_move;
+      current_human_move = null;
+
+      // Display moves
+      updateMovePanels();
+
+      // Update score
+      // updateScoreDisplay(current_human_move, current_ai_move);
+      updateScoreDisplay(last_human_move, last_ai_move);
+
+      // Predict Human Move
+      predicted_human_move = predictHumanMove();
+
+      // Generate AI move (counter predicted human move)
+      if (predicted_human_move === 'r') current_ai_move = 'p';
+      else if (predicted_human_move === 'p') current_ai_move = 's';
+      else if (predicted_human_move === 's') current_ai_move = 'r';
+      else current_ai_move = moves[Math.floor(Math.random() * 3)];
+
+      // Update next move button highlight
+      highlightPredictedButton();
+
+      // Save progress
+      saveToCookie();
+    }
+
+    document.getElementById("rock-btn").onclick = () => handleHumanMove("r");
+    document.getElementById("paper-btn").onclick = () => handleHumanMove("p");
+    document.getElementById("scissor-btn").onclick = () => handleHumanMove("s");
+
+    document.getElementById("restart-btn").onclick = () => {
+      human_score = 0;
+      ai_score = 0;
+      scoreDisplay.innerHTML = `<div class="score-main">Play</div>`;
+      resetPanels();
+      saveToCookie();
+    };
+
+    resetBtn.onclick = () => {
+      Object.keys(moveMemory).forEach(k => moveMemory[k] = { "success": 0, "failure": 0 });
+      total_plays = 0;
+      resetBtn.textContent = "No Moves In History";
+      last_human_move = null;
+      last_ai_move = null;
+      predicted_human_move = null;
+      current_ai_move = null;
+      current_human_move = null;
+      highlightPredictedButton();
+      saveToCookie();
+    };
+
+    /* ==========================
+       RESET PANELS TO DEFAULT
+    ========================== */
+
+    function resetPanels() {
+      aiSlot.innerHTML = '<div class="move-symbol">💻</div><div class="move-text">Computer Move</div>';
+      humanSlot.innerHTML = '<div class="move-symbol">🙂</div><div class="move-text">Your Move</div>';
+      aiSlot.classList.remove("winner");
+      humanSlot.classList.remove("winner");
+    }
+
+    /* ==========================
+       LOAD PREVIOUS STATE
+    ========================== */
+
+    loadFromCookie();
+  </script>
+</body>
+</html>
