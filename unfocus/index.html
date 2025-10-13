@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Unfocus</title>
+<link rel="icon" href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/unfocus/tab-icon.png"
+  type="image/png">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%; width: 100%;
+    background: black; color: white; font-family: "Arial", sans-serif;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+  }
+  #page {
+    aspect-ratio: 10 / 16;
+    height: 100vh; max-width: 100vw;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: stretch;
+  }
+  .panel {
+    width: 100%; display: flex; align-items: center; justify-content: center;
+    border: none; /* ✅ Transparent borders */
+    box-sizing: border-box;
+  }
+  /* 1:2:1:10:1:1 = 16 */
+  #blank-top{flex:1;} #title-panel{flex:2;} #subtitle-panel{flex:1;}
+  #grid-panel{flex:10;} #button-panel{flex:1;} #blank-bottom{flex:1;}
+  h1 {
+    font-size: 3em;
+    letter-spacing: 2px;
+    margin: 0;
+    text-align: center;
+    filter: blur(0.5px); /* ✅ soft blur */
+    text-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+  h2{font-style:italic; font-weight:300; font-size:1.1em; opacity:0.8; margin:0; text-align:center;
+    filter: blur(0.5px); /* ✅ soft blur */
+    text-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+  #dots{
+    aspect-ratio:1 / 1; width:90%; height:auto; max-height:90%; max-width:90%;
+    display:block; border:none; background:transparent;
+  }
+  button{
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white;
+    font-size:1.1em; letter-spacing:1px; padding:10px 30px; border-radius:25px; cursor:pointer;
+    transition:background .3s ease, transform .2s ease; text-align:center;
+    filter: blur(0.5px); /* ✅ soft blur */
+    text-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+  button:hover{background:rgba(255,255,255,0.25); transform:scale(1.05);}
+  button:active{transform:scale(0.95);}
+</style>
+</head>
+<body>
+  <div id="page">
+    <div id="blank-top" class="panel"></div>
+    <div id="title-panel" class="panel"><h1>Unfocus</h1></div>
+    <div id="subtitle-panel" class="panel"><h2>Cloudy Lights</h2></div>
+    <div id="grid-panel" class="panel">
+      <canvas id="dots" width="480" height="480"></canvas>
+    </div>
+    <div id="button-panel" class="panel"><button id="interfere">Interfere</button></div>
+    <div id="blank-bottom" class="panel"></div>
+  </div>
+
+<script>
+const canvas = document.getElementById('dots');
+const ctx = canvas.getContext('2d');
+const BASE_SIZE = 480;
+const cellSize = 40;
+let dots = [];
+
+/* Structured RGB Palette */
+function generatePalette() {
+  const palette = [];
+  const rVals = [127, 255];
+  const gVals = []; for (let i=1;i<=20;i++) gVals.push(Math.round((i/20)*255));
+  const bVals = []; for (let i=1;i<=6;i++)  bVals.push(Math.round((i/6)*255));
+  for (const r of rVals) for (const g of gVals) for (const b of bVals)
+    palette.push({r,g,b});
+  return palette;
+}
+const colorPalette = generatePalette();
+function pickColor(){ return colorPalette[Math.floor(Math.random()*colorPalette.length)]; }
+
+function resizeCanvasToDisplaySize(){
+  if (canvas.width !== BASE_SIZE || canvas.height !== BASE_SIZE) {
+    canvas.width = BASE_SIZE; canvas.height = BASE_SIZE;
+  }
+}
+
+class Dot {
+  constructor(x, y, r) { this.x=x; this.y=y; this.r=r; this.reset(true); }
+  reset(initial=false){
+    this.color = pickColor();
+    this.fadeIn = 1000 + Math.random()*2000;
+    this.onTime = 800  + Math.random()*2000;
+    this.fadeOut= 1000 + Math.random()*2000;
+    this.wait   = 800  + Math.random()*2000;
+    this.total  = this.fadeIn + this.onTime + this.fadeOut + this.wait;
+    this.t = initial ? Math.random()*this.total : 0;
+  }
+  update(dt){
+    this.t += dt;
+    if (this.t > this.total) { this.reset(); return; }
+
+    let opacity;
+    if (this.t < this.fadeIn) opacity = this.t / this.fadeIn;
+    else if (this.t < this.fadeIn + this.onTime) opacity = 1;
+    else if (this.t < this.fadeIn + this.onTime + this.fadeOut)
+      opacity = 1 - (this.t - this.fadeIn - this.onTime) / this.fadeOut;
+    else opacity = 0;
+
+    const outerR = this.r * 5.6;
+    const {r,g,b} = this.color;
+    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, outerR);
+    grad.addColorStop(0.0, `rgba(${r},${g},${b},0)`);
+    grad.addColorStop(0.0, `rgba(${r},${g},${b},${0.9*opacity})`);
+    grad.addColorStop(1.0, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grad;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, outerR, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  }
+}
+
+function createGridDots(){
+  dots = [];
+  const cols = Math.floor(BASE_SIZE / cellSize);
+  const rows = Math.floor(BASE_SIZE / cellSize);
+  const radius = cellSize * 0.25;
+  for (let i=0;i<cols;i++){
+    for (let j=0;j<rows;j++){
+      const x = i*cellSize + cellSize/2;
+      const y = j*cellSize + cellSize/2;
+      dots.push(new Dot(x,y,radius));
+    }
+  }
+}
+createGridDots();
+
+/* Edge fade (rectangular 4-linear version) */
+function drawEdgeFade() {
+  const w = BASE_SIZE;
+  const h = BASE_SIZE;
+  // pixels from each edge to fade
+  const fadeSize = 160;
+  // Fade strength (0 = no fade, 1 = full black)
+  const edgeOpacity = 1;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+
+  // Top
+  let grad = ctx.createLinearGradient(0, 0, 0, fadeSize);
+  grad.addColorStop(0, `rgba(0,0,0,${edgeOpacity})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, fadeSize);
+
+  // Bottom
+  grad = ctx.createLinearGradient(0, h, 0, h - fadeSize);
+  grad.addColorStop(0, `rgba(0,0,0,${edgeOpacity})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, h - fadeSize, w, fadeSize);
+
+  // Left
+  grad = ctx.createLinearGradient(0, 0, fadeSize, 0);
+  grad.addColorStop(0, `rgba(0,0,0,${edgeOpacity})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, fadeSize, h);
+
+  // Right
+  grad = ctx.createLinearGradient(w, 0, w - fadeSize, 0);
+  grad.addColorStop(0, `rgba(0,0,0,${edgeOpacity})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(w - fadeSize, 0, fadeSize, h);
+
+  ctx.restore();
+}
+
+/* ✅ Unified interfere function */
+function interfere() {
+  const fraction = 0.1 + Math.random() * 0.4;
+  const count = Math.floor(fraction * dots.length);
+  for (let i = 0; i < count; i++) {
+    dots[Math.floor(Math.random() * dots.length)].reset();
+  }
+}
+
+/* Animation loop */
+let last = performance.now();
+function animate(now){
+  const dt = now - last; last = now;
+  resizeCanvasToDisplaySize();
+  ctx.clearRect(0,0,BASE_SIZE,BASE_SIZE);
+  dots.forEach(d => d.update(dt));
+  drawEdgeFade();
+  requestAnimationFrame(animate);
+}
+animate(last);
+
+/* ✅ Event triggers for both button and canvas */
+document.getElementById('interfere').addEventListener('click', interfere);
+canvas.addEventListener('click', interfere);
+</script>
+</body>
+</html>
