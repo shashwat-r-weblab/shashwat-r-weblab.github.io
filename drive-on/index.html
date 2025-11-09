@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Drive On</title>
+  <link rel="icon"
+    href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/drive-on/tab-icon.png"
+    type="image/png">
+</head>
+<body style="margin:0; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#000;">
+  <h4 style="color:white; margin-bottom:8px;">
+    Frame Rate: <span id="frameRate">10</span> fps
+  </h4>
+  <script>
+
+    /* HELPERS */
+
+    function print(...args) {
+      console.log(...args);
+    }
+
+    function setParentChild(parent_element, child_element) {
+      parent_element.appendChild(child_element);
+    }
+
+    function createSvgElement(parent_element, element_type) {
+      const svgns = "http://www.w3.org/2000/svg";
+      const element = document.createElementNS(svgns, element_type);
+      setParentChild(parent_element, element);
+      return element;
+    }
+
+    function setAttributes(element, attributes) {
+      for (const [key, value] of Object.entries(attributes)) {
+        element.setAttribute(key, value);
+      }
+    }
+
+    function loopingValue(value, limit) {
+      const valueInLimit = value - Math.floor(value/limit)*limit;
+      return valueInLimit;
+    }
+
+    /* SETUP */
+
+    const SCREEN_WIDTH = 400;
+    const SCREEN_HEIGHT = 600;
+
+    // append right below the h4
+    const svgElem = createSvgElement(document.body, "svg");
+    svgElem.style.background = "#cfe9ff";
+    setAttributes(svgElem, {
+      "width": SCREEN_WIDTH,
+      "height": SCREEN_HEIGHT,
+      "viewBox": `0 0 ${SCREEN_WIDTH} ${SCREEN_HEIGHT}`,
+    });
+
+    // Shift Origin to Bottom Left
+    const svg = createSvgElement(svgElem, "g");
+    setAttributes(svg, {
+      "transform": `
+        translate(0, ${SCREEN_HEIGHT})
+        scale(1, -1)
+      `,
+    });
+
+    const origin = createSvgElement(svg, "circle");
+    setAttributes(origin, {
+      "cx": "0",
+      "cy": "0",
+      "r": 10,
+      "fill": "#fff",
+    });
+
+    // const puck = createSvgElement(svg, "rect");
+    // setAttributes(puck, {
+    //   "x": "0",
+    //   "y": "550",
+    //   "width": 10,
+    //   "height": 10,
+    //   "fill": "#000",
+    // });
+
+    // Create Sky
+    const sky = createSvgElement(svg, "rect");
+    setAttributes(sky, {
+      "x": "0",
+      "y": "0",
+      "width": SCREEN_WIDTH,
+      "height": SCREEN_HEIGHT,
+      "fill": "#3c7a9f",
+    })
+
+    // Create Clouds
+    for (const attributes of [
+
+      {"cx":  50, "cy": 490, "r": 40},
+      {"cx": 100, "cy": 500, "r": 50},
+      {"cx": 150, "cy": 480, "r": 40},
+      {"cx": 200, "cy": 500, "r": 55},
+      {"cx": 250, "cy": 530, "r": 55},
+      {"cx": 300, "cy": 500, "r": 50},
+      {"cx": 350, "cy": 500, "r": 40},
+
+      {"cx":  25, "cy": 350, "r": 20},
+      {"cx":  50, "cy": 350, "r": 30},
+      {"cx":  75, "cy": 370, "r": 20},
+      {"cx": 100, "cy": 350, "r": 25},
+      {"cx": 125, "cy": 345, "r": 20},
+      {"cx": 150, "cy": 350, "r": 30},
+      {"cx": 175, "cy": 360, "r": 20},
+      {"cx": 200, "cy": 355, "r": 25},
+      {"cx": 225, "cy": 360, "r": 20},
+      {"cx": 250, "cy": 360, "r": 30},
+      {"cx": 275, "cy": 350, "r": 20},
+      {"cx": 300, "cy": 365, "r": 25},
+      {"cx": 325, "cy": 370, "r": 20},
+      {"cx": 350, "cy": 365, "r": 30},
+      {"cx": 375, "cy": 370, "r": 20},
+
+    ]) {
+      const cloudCircle = createSvgElement(svg, "circle");
+      setAttributes(cloudCircle, {
+        "cx": attributes["cx"],
+        "cy": attributes["cy"],
+        "r": attributes["r"],
+        "fill": "#6aa2c5",
+      })
+    }
+
+    // Create Mountains
+    const mountains = createSvgElement(svg, "g");
+    const mountainRect = createSvgElement(mountains, "rect");
+    setAttributes(mountainRect, {
+      "x": 0, "y": 0, "width": 1200, "height": 200,
+      "fill": "#a4bfd0",
+    })
+    for (const attributes of [
+
+      {"cx":    0, "cy": 170, "r": 100},
+      {"cx":  100, "cy": 200, "r": 100},
+      {"cx":  200, "cy": 150, "r": 100},
+      {"cx":  300, "cy": 170, "r": 100},
+      {"cx":  400, "cy": 200, "r": 100},
+      {"cx":  500, "cy": 160, "r": 100},
+      {"cx":  600, "cy": 250, "r": 100},
+      {"cx":  700, "cy": 200, "r": 100},
+      {"cx":  800, "cy": 170, "r": 100},
+      {"cx":  900, "cy": 200, "r": 100},
+      {"cx": 1000, "cy": 150, "r": 100},
+      {"cx": 1100, "cy": 170, "r": 100},
+      {"cx": 1200, "cy": 200, "r": 100},
+
+    ]) {
+      const mountainCircle = createSvgElement(mountains, "circle");
+      setAttributes(mountainCircle, {
+        "cx": attributes["cx"],
+        "cy": attributes["cy"],
+        "r": attributes["r"],
+        "fill": "#a4bfd0",
+      })
+    }
+
+    // Create Back Buildings
+    const backBuildings = createSvgElement(svg, "polygon");
+    const backBuildingHeights = [
+      200, 190, 210, 200, 240, 230, 240, 220, 200, 200,
+      220, 200, 210, 230, 190, 210, 220, 190, 210, 220,
+      200, 190, 210, 200, 240, 230, 240, 220, 200, 200,
+    ]
+    const backBuildingWidth = 40;
+    let backBuildingPoints = "0,0 "
+    for (i=0; i<backBuildingHeights.length; i++) {
+      backBuildingPoints += String(i*backBuildingWidth);
+      backBuildingPoints += ",";
+      backBuildingPoints += String(backBuildingHeights[i]);
+      backBuildingPoints += " ";
+      backBuildingPoints += String((i+1)*backBuildingWidth);
+      backBuildingPoints += ",";
+      backBuildingPoints += String(backBuildingHeights[i]);
+      backBuildingPoints += " "
+    }
+    backBuildingPoints += String(backBuildingPoints.length*backBuildingWidth)+",0"
+    setAttributes(backBuildings, {
+      "points": backBuildingPoints,
+      "fill": "#0c2d61",
+    })
+
+    // Create Mid Buildings
+    const midBuildings = createSvgElement(svg, "g");
+    const midBuildingHeights = [
+      180, 220, 240, 220, 260, 240, 260, 240, 180, 220,
+      240, 180, 220, 260, 220, 240, 260, 220, 220, 240,
+      260, 220, 240, 180, 220, 180, 220, 240, 220, 260,
+    ]
+
+    const midBuildingWidth = 70;
+    const midBuildingGap = 10;
+    const windowSeparation = 6;
+    for (i=0; i<midBuildingHeights.length; i++) {
+      const midBuildingRect = createSvgElement(midBuildings, "rect");
+      let leftX = i*(midBuildingWidth+midBuildingGap);
+      let rightX = leftX+midBuildingWidth;
+      let topY = midBuildingHeights[i];
+      setAttributes(midBuildingRect, {
+        "x": leftX,
+        "y": 0,
+        "width": midBuildingWidth,
+        "height": topY,
+        "fill": "#89a2ae",
+      });
+
+      for (h=0; h<topY; h+=20) {
+        const buildingPane1 = createSvgElement(midBuildings, "rect");
+        setAttributes(buildingPane1, {
+          "x": leftX+windowSeparation,
+          "y": h,
+          "width": midBuildingWidth-2*windowSeparation,
+          "height": 20-windowSeparation,
+          "fill": "#cadfe6",
+        });
+      }
+
+    }
+
+    // Create Trees
+    const trees = createSvgElement(svg, "g");
+    
+    let heights = [
+       80, 120, 140, 120, 160, 140, 160, 140,  80, 120,
+      140,  80, 120, 160, 120, 140, 160, 120, 120, 140,
+      160, 120, 140,  80, 120,  80, 120, 140, 120, 160,
+       80, 120, 140, 120, 160, 140, 160, 140,  80, 120,
+    ]
+
+    for (i=0; i<heights.length; i++) {
+      const leaves = createSvgElement(trees, "ellipse");
+      setAttributes(leaves, {
+        "cx": i*40+20,
+        "cy": heights[i]/2,
+        "rx": 18,
+        "ry": heights[i]/2,
+        "fill": "#58862f",
+      })
+      const trunk = createSvgElement(trees, "rect");
+      setAttributes(trunk, {
+        "x": i*40+15,
+        "y": 0,
+        "width": 10,
+        "height": heights[i]*3/4,
+        "fill": "#472c18",
+      })
+    }
+
+    // Create Road
+    const road = createSvgElement(svg, "rect");
+    setAttributes(road, {
+      "x": "0",
+      "y": "0",
+      "width": "400",
+      "height": "50",
+      "fill": "#e5d8c8",
+    })
+
+    // Create Car
+    const car = createSvgElement(svg, "g");
+
+    const body = createSvgElement(car, "polygon");
+    setAttributes(body, {
+      "points": `
+        138,0 139,7 130,20 120,25 110,26 92,28 70,38 60,40 50,38 40,36 15,30 3,30 4,26 2,23 0,20 0,11 6,3 11,3 20,3 30,0
+      `,
+      // "fill": "#6c333c",
+      "fill": "#103843",
+    });
+
+    const panes = createSvgElement(car, "polygon");
+    setAttributes(panes, {
+      "points": `
+        28,28 40,25 60,25 84,27 70,34 60,36 50,35 40,32
+      `,
+      "fill": "#1e88e5",
+    });
+
+    const wheel1 = createSvgElement(car, "circle");
+    setAttributes(wheel1, {
+      "cx": "23",
+      "cy": "8",
+      "r": "13",
+      "fill": "#000",
+    });
+
+    const wheel1Rim = createSvgElement(car, "circle");
+    setAttributes(wheel1Rim, {
+      "cx": "23",
+      "cy": "8",
+      "r": "10",
+      "fill": "#ddd",
+    });
+
+    const wheel2 = createSvgElement(car, "circle");
+    setAttributes(wheel2, {
+      "cx": "108",
+      "cy": "8",
+      "r": "13",
+      "fill": "#000",
+    });
+
+    const wheel2Rim = createSvgElement(car, "circle");
+    setAttributes(wheel2Rim, {
+      "cx": "108",
+      "cy": "8",
+      "r": "10",
+      "fill": "#ddd",
+    });
+
+    /* ANIMATE */
+
+    // let x = -100;
+    // const carSpeed = 0.2; // px per ms
+    // function moveCar(deltaMs) {
+    //   x += carSpeed * deltaMs;
+    //   if (x > 400) x = -100;
+    //   car.setAttribute("transform", `translate(${x},0)`);
+    // }
+
+    function moveMountains(deltaMs, currTime) {
+      let displacement = loopingValue(currTime/200, 800);
+      mountains.setAttribute("transform", `
+        translate(-${displacement},0)
+      `);
+    }
+
+    function moveBackBuildings(deltaMs, currTime) {
+      let displacement = loopingValue(currTime/50, 800);
+      backBuildings.setAttribute("transform", `
+        translate(-${displacement},0)
+      `);
+    }
+
+    function moveMidBuildings(deltaMs, currTime) {
+      let displacement = loopingValue(currTime/20, 2000);
+      midBuildings.setAttribute("transform", `
+        translate(-${displacement},0)
+      `);
+    }
+
+    function moveTrees(deltaMs, currTime) {
+      let displacement = loopingValue(currTime/3, 1200);
+      trees.setAttribute("transform", `
+        translate(-${displacement},0)
+      `);
+    }
+
+    function vibrateCar(deltaMs, currTime) {
+      carLength = 140
+      contraction = 2*Math.sin(currTime/100);
+      drift = 5*Math.sin(currTime/1500);
+      sx = 1 - contraction/carLength
+      sy = 1 / sx
+      car.setAttribute("transform", `
+        translate(20,20)
+        translate(${carLength*sx/2},0)
+        scale(${sx},${sy})
+        translate(${-carLength*sx/2},0)
+        translate(${-drift},0)
+      `);
+    }
+
+    function updateScene(deltaMs, currTime) {
+      moveMountains(deltaMs, currTime);
+      moveBackBuildings(deltaMs, currTime);
+      moveMidBuildings(deltaMs, currTime);
+      moveTrees(deltaMs, currTime);
+      vibrateCar(deltaMs, currTime);
+    }
+
+    function updateFrameRate(deltaMs) {
+      const fpsSpan = document.getElementById("frameRate");
+      const fps = 1000 / deltaMs;
+      fpsSpan.textContent = fps.toFixed(1);
+    }
+
+    let currTime = null;
+    function animate(timestamp) {
+      let deltaMs = timestamp - currTime;
+      currTime = timestamp;
+      updateFrameRate(deltaMs);
+      updateScene(deltaMs, currTime);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
