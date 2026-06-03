@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sudoku AutoSolver</title>
   <link rel="icon"
     href="https://raw.githubusercontent.com/shashwat-r-weblab/shashwat-r-weblab.github.io/refs/heads/main/sudoku/tab-icon.png"
@@ -10,7 +11,15 @@
     * { box-sizing: border-box; }
 
     :root {
-      --thickness: 8px;
+      --available-width: 100vw;
+      --game-size: min(calc(var(--available-width) / 1.08), 100dvh * 0.72);
+      --page-padding: calc(var(--game-size) * 0.04);
+      --cell-size: calc(var(--game-size) / 9);
+      --thickness: calc(var(--cell-size) / 8);
+      --header-size: calc(var(--cell-size) * 0.55);
+      --toolbar-height: calc(var(--cell-size) * 0.72);
+      --pad-button-size: calc(var(--cell-size) * 0.72);
+      --layout-gap: calc(var(--thickness) * 1.5);
 
       --theme-hue: 38;
       --theme-light: hsl(var(--theme-hue) 70% 50%);
@@ -51,28 +60,37 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      padding-inline: var(--page-padding);
       background: var(--bg-body);
       color: var(--text-light);
       font-family: "Arial Rounded MT Bold", "Nunito", "Avenir Next", Arial, sans-serif;
     }
 
     h1 {
-      margin: 0 0 24px;
-      font-size: 32px;
+      margin: 0;
+      flex: 0 0 auto;
+      height: var(--header-size);
+      line-height: var(--header-size);
+      font-size: calc(var(--header-size) * 0.72);
       font-weight: 900;
     }
 
     .toolbar {
-      width: min(92vw, 630px);
+      width: min(var(--game-size), calc(100vw - (2 * var(--page-padding))));
+      height: var(--toolbar-height);
+      flex: 0 0 var(--toolbar-height);
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 0;
     }
 
     .toolbar-left {
@@ -93,8 +111,8 @@
 
     .mode-toggle {
       position: relative;
-      width: 170px;
-      height: 44px;
+      width: calc(var(--toolbar-height) * 3.9);
+      height: var(--toolbar-height);
       border: 0;
       border-radius: 999px;
       background: var(--bg-white);
@@ -114,7 +132,7 @@
       align-items: center;
       justify-content: center;
       z-index: 2;
-      font-size: 14px;
+      font-size: calc(var(--toolbar-height) * 0.32);
       pointer-events: none;
       color: var(--text-dark);
       transition: color 160ms ease;
@@ -139,10 +157,10 @@
 
     .toggle-circle {
       position: absolute;
-      top: 4px;
-      left: 4px;
-      width: 78px;
-      height: 36px;
+      top: calc(var(--toolbar-height) / 11);
+      left: calc(var(--toolbar-height) / 11);
+      width: calc((var(--toolbar-height) * 3.9 - (var(--toolbar-height) / 5.5)) / 2);
+      height: calc(var(--toolbar-height) * 0.82);
       border-radius: 999px;
       background: var(--bg-body);
       transition: transform 160ms ease;
@@ -150,19 +168,19 @@
     }
 
     .mode-toggle.solve .toggle-circle {
-      transform: translateX(84px);
+      transform: translateX(calc((var(--toolbar-height) * 3.9 - (var(--toolbar-height) / 5.5)) / 2));
     }
 
     .toolbar-icon {
-      width: 36px;
-      height: 36px;
+      width: calc(var(--toolbar-height) * 0.82);
+      height: calc(var(--toolbar-height) * 0.82);
       border: 0;
       border-radius: 999px;
       background: var(--bg-white);
       color: var(--text-dark);
       cursor: pointer;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 22px;
+      font-size: calc(var(--toolbar-height) * 0.48);
       font-weight: 700;
       line-height: 1;
       padding: 0;
@@ -178,8 +196,9 @@
     }
 
     #sudoku {
-      width: min(92vw, 630px);
-      height: min(92vw, 630px);
+      width: var(--game-size);
+      height: var(--game-size);
+      flex: 0 0 var(--game-size);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
@@ -202,7 +221,6 @@
       background: var(--bg-body);
     }
 
-    
     .cell {
       container-type: inline-size;
       position: relative;
@@ -253,7 +271,6 @@
       background: var(--bg-fixed-error-selected);
     }
 
-
     .candidate-layer {
       position: absolute;
       inset: 2px;
@@ -298,23 +315,26 @@
     .cell.filled .final-number { display: flex; }
 
     .number-pad {
-      width: min(92vw, 630px);
+      width: var(--game-size);
+      height: var(--pad-button-size);
+      flex: 0 0 var(--pad-button-size);
       display: grid;
       grid-template-columns: repeat(10, 1fr);
-      gap: 8px;
-      margin-top: 24px;
+      gap: var(--thickness);
+      margin-top: 0;
       touch-action: manipulation;
     }
 
     .number-pad button {
       aspect-ratio: 1 / 1;
+      height: var(--pad-button-size);
       padding: 0;
       border: 0;
       border-radius: calc(var(--thickness) / 2);
       background: var(--bg-white);
       color: var(--text-dark);
       font-family: inherit;
-      font-size: calc(min(92vw, 62vh) / 20);
+      font-size: calc(var(--pad-button-size) * 0.5);
       font-weight: 900;
       cursor: pointer;
       touch-action: none;
@@ -333,26 +353,18 @@
       opacity: 0.45;
       cursor: default;
     }
-  
-    #gameRoot{
-      width:min(100vw, calc(100vh * 0.72));
-      height:100vh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:1vh;
-      padding:1vh;
-    }
 
-    .toolbar{width:100%;}
-    #sudoku{
-      width:min(92vw, 62vh);
-      height:min(92vw, 62vh);
-    }
-    .number-pad{
-      width:100%;
-      margin-top:1vh;
+    #gameRoot {
+      width: var(--game-size);
+      height: 100dvh;
+      max-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--layout-gap);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      overflow: hidden;
     }
 
 </style>
@@ -1150,7 +1162,6 @@
       if (action === "number" || action === "clear") {
         button.disabled = !BUTTON_ENABLED[value];
       }
-
 
       attachButtonGestureHandlers(button, value, action);
 
