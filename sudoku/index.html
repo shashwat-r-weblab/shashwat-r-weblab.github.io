@@ -1250,6 +1250,9 @@
           pushUpdatedGrid(SELECTED_ROW, SELECTED_COL, value, false, value !== EMPTY_VALUE);
         }
 
+        SELECTED_ROW = 0;
+        SELECTED_COL = 0;
+
         render();
         return;
       }
