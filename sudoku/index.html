@@ -206,7 +206,6 @@
       border-radius: var(--thickness);
       gap: 0;
       background: var(--bg-white);
-      touch-action: manipulation;
     }
 
     .box {
@@ -364,7 +363,23 @@
       gap: var(--layout-gap);
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       overflow: hidden;
+    }
+
+    html,
+    body,
+    #gameRoot,
+    #gameRoot *,
+    #sudoku,
+    #sudoku *,
+    button,
+    .cell,
+    .candidate,
+    .final-number {
+      -webkit-user-select: none;
       user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
     }
 
 </style>
@@ -1428,6 +1443,10 @@
 
     attachGlobalGestureHandlers();
     render();
+  </script>
+  <script>
+    document.addEventListener("selectstart", (e) => e.preventDefault(), {passive:false});
+    document.addEventListener("contextmenu", (e) => e.preventDefault(), {passive:false});
   </script>
 </body>
 </html>
