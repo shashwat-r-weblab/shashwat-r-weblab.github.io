@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sudoku AutoSolver</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --thickness: 8px;
+
+      --theme-hue: 38;
+      --theme-light: hsl(var(--theme-hue) 70% 50%);
+      --theme-light-selected: hsl(var(--theme-hue) 75% 60%);
+      --theme-dark: hsl(var(--theme-hue) 65% 45%);
+      --theme-dark-selected: hsl(var(--theme-hue) 75% 60%);
+
+      --white-hue: 0;
+      --white-light: hsl(var(--white-hue) 5% 90%);
+      --white-light-selected: hsl(var(--white-hue) 0% 95%);
+
+      --red-hue: 15;
+      --red-light: hsl(var(--red-hue) 60% 35%);
+      --red-light-selected: hsl(var(--red-hue) 60% 45%);
+      --red-dark: hsl(var(--red-hue) 60% 35%);
+      --red-dark-selected: hsl(var(--red-hue) 60% 45%);
+
+      --text-dark: var(--theme-light);
+      --text-light: var(--white-light);
+
+      --bg-body: var(--theme-light);
+      --bg-white: var(--white-light);
+      --bg-white-light: var(--white-light-selected);
+
+      --bg-empty: var(--white-light);
+      --bg-empty-selected: var(--white-light-selected);
+
+      --bg-filled: var(--theme-light);
+      --bg-filled-selected: var(--theme-light-selected);
+      --bg-filled-error: var(--red-light);
+      --bg-filled-error-selected: var(--red-light-selected);
+
+      --bg-fixed: var(--theme-dark);
+      --bg-fixed-selected: var(--theme-dark-selected);
+      --bg-fixed-error: var(--red-dark);
+      --bg-fixed-error-selected: var(--red-dark-selected);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-body);
+      color: var(--text-light);
+      font-family: "Arial Rounded MT Bold", "Nunito", "Avenir Next", Arial, sans-serif;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 32px;
+      font-weight: 900;
+    }
+
+    .toolbar {
+      width: min(92vw, 630px);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .toolbar-center {
+      display: flex;
+      justify-content: center;
+    }
+
+    .toolbar-right {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .mode-toggle {
+      position: relative;
+      width: 170px;
+      height: 44px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--bg-white);
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      font-weight: 900;
+      overflow: hidden;
+    }
+
+    .toggle-label {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      font-size: 14px;
+      pointer-events: none;
+      color: var(--text-dark);
+      transition: color 160ms ease;
+    }
+
+    .toggle-label.create {
+      left: 0;
+      color: var(--text-light);
+    }
+
+    .toggle-label.solve {
+      right: 0;
+    }
+
+    .mode-toggle.solve .toggle-label.create {
+      color: var(--text-dark);
+    }
+
+    .mode-toggle.solve .toggle-label.solve {
+      color: var(--text-light);
+    }
+
+    .toggle-circle {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 78px;
+      height: 36px;
+      border-radius: 999px;
+      background: var(--bg-body);
+      transition: transform 160ms ease;
+      z-index: 1;
+    }
+
+    .mode-toggle.solve .toggle-circle {
+      transform: translateX(84px);
+    }
+
+    .toolbar-icon {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--bg-white);
+      color: var(--text-dark);
+      cursor: pointer;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .toolbar-icon.is-pressing {
+      background: var(--bg-white-light);
+    }
+
+    .toolbar-icon:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    #sudoku {
+      width: min(92vw, 630px);
+      height: min(92vw, 630px);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: calc(var(--thickness) / 2);
+      border-radius: var(--thickness);
+      gap: 0;
+      background: var(--bg-white);
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: var(--thickness);
+      padding: var(--thickness);
+      margin: calc(var(--thickness) / 2);
+      border-radius: calc(var(--thickness) * 3 / 4);
+      background: var(--bg-body);
+    }
+
+    
+    .cell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: var(--bg-empty);
+      color: var(--text-dark);
+      border: 0;
+      border-radius: calc(var(--thickness) / 2);
+      cursor: pointer;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .cell.filled {
+      background: var(--bg-filled);
+    }
+
+    .cell.fixed {
+      background: var(--bg-fixed);
+    }
+
+    .cell.error {
+      background: var(--bg-filled-error);
+    }
+
+    .cell.selected {
+      background: var(--bg-empty-selected);
+    }
+
+    .cell.filled.selected {
+      background: var(--bg-filled-selected);
+    }
+
+    .cell.fixed.selected {
+      background: var(--bg-fixed-selected);
+    }
+
+    .cell.error.selected {
+      background: var(--bg-filled-error-selected);
+    }
+
+    .cell.fixed.error {
+      background: var(--bg-fixed-error);
+    }
+
+    .cell.fixed.error.selected {
+      background: var(--bg-fixed-error-selected);
+    }
+
+
+    .candidate-layer {
+      position: absolute;
+      inset: 2px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      color: var(--text-dark);
+      font-size: clamp(8px, 1.55vw, 14px);
+      font-weight: 900;
+    }
+
+    .candidate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .final-number {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: inherit;
+      color: var(--text-dark);
+      font-size: clamp(26px, 6.8vw, 58px);
+      font-weight: 1000;
+      line-height: 1;
+      letter-spacing: -2px;
+      z-index: 1;
+    }
+
+    .cell.filled .final-number,
+    .cell.fixed .final-number,
+    .cell.fixed .candidate-layer,
+    .cell.error .final-number,
+    .cell.error .candidate-layer {
+      color: var(--text-light);
+    }
+
+    .cell.filled .candidate-layer { display: none; }
+    .cell.filled .final-number { display: flex; }
+
+    .number-pad {
+      width: min(92vw, 630px);
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 8px;
+      margin-top: 24px;
+      touch-action: manipulation;
+    }
+
+    .number-pad button {
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      border: 0;
+      border-radius: calc(var(--thickness) / 2);
+      background: var(--bg-white);
+      color: var(--text-dark);
+      font-family: inherit;
+      font-size: clamp(15px, 3.2vw, 26px);
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .number-pad button.system-icon {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-weight: 700;
+    }
+
+    .number-pad button.is-pressing {
+      background: var(--bg-white-light);
+    }
+
+    .number-pad button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sudoku AutoSolver</h1>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button id="undoButton" class="toolbar-icon" type="button" aria-label="Undo">←</button>
+      <button id="redoButton" class="toolbar-icon" type="button" aria-label="Redo">→</button>
+    </div>
+
+    <div class="toolbar-center">
+      <button id="modeToggle" class="mode-toggle" type="button" aria-label="Toggle Create and Solve mode">
+        <span class="toggle-circle"></span>
+        <span class="toggle-label create">Create</span>
+        <span class="toggle-label solve">Solve</span>
+      </button>
+    </div>
+
+    <div class="toolbar-right">
+      <button id="resetButton" class="toolbar-icon" type="button" aria-label="Reset grid">↻</button>
+    </div>
+  </div>
+
+  <div id="sudoku"></div>
+  <div class="number-pad" id="numberPad"></div>
+
+  <script>
+    const EMPTY_VALUE = 0;
+    const STORAGE_KEY = "sudoku_autosolver_state_v1";
+    const FULL_MASK = (1 << 9) - 1;
+    const MAX_ITERATIONS = 20;
+
+    const UNIQUENESS_SETS = createUniquenessSets();
+
+    let DEBUG = false;
+
+    let FIXED_MODE = true;
+    let SELECTED_ROW = 0;
+    let SELECTED_COL = 0;
+    let GRID_STACK = [createEmptyStackEntry()];
+    let GRID_STACK_POSITION = 0;
+    let NEXT_GRID = null;
+
+    const BUTTON_ENABLED = {
+      0: true,
+      1: true,
+      2: true,
+      3: true,
+      4: true,
+      5: true,
+      6: true,
+      7: true,
+      8: true,
+      9: true,
+      undo: false,
+      redo: false,
+      reset: false
+    };
+
+    const LONG_PRESS_MS = 500;
+    let longPressTimer = null;
+    let longPressFired = false;
+
+    function debugLog(functionName, params = {}) {
+      if (DEBUG === true) {
+        console.log(functionName, params, JSON.parse(JSON.stringify(NEXT_GRID)));
+      }
+    }
+
+    function setNextGridFromCurrentPosition() {
+      NEXT_GRID = cloneGrid(GRID_STACK[GRID_STACK_POSITION].grid);
+      debugLog("setNextGridFromCurrentPosition", {
+        GRID_STACK_POSITION
+      });
+    }
+
+    function saveStateToLocalStorage() {
+      const state = {
+        DEBUG,
+        FIXED_MODE,
+        SELECTED_ROW,
+        SELECTED_COL,
+        GRID_STACK,
+        GRID_STACK_POSITION,
+        NEXT_GRID
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+        if (DEBUG === true) {
+          console.log("saveStateToLocalStorage", state);
+        }
+      } catch (error) {
+        console.warn("Could not save Sudoku state to localStorage", error);
+      }
+    }
+
+    function loadStateFromLocalStorage() {
+      try {
+        const rawState = localStorage.getItem(STORAGE_KEY);
+
+        if (!rawState) return false;
+
+        const state = JSON.parse(rawState);
+
+        if (
+          !state ||
+          !Array.isArray(state.GRID_STACK) ||
+          state.GRID_STACK.length === 0 ||
+          typeof state.GRID_STACK_POSITION !== "number" ||
+          state.GRID_STACK_POSITION < 0 ||
+          state.GRID_STACK_POSITION >= state.GRID_STACK.length
+        ) {
+          return false;
+        }
+
+        DEBUG = Boolean(state.DEBUG);
+        FIXED_MODE = Boolean(state.FIXED_MODE);
+        SELECTED_ROW = Number(state.SELECTED_ROW) || 0;
+        SELECTED_COL = Number(state.SELECTED_COL) || 0;
+        GRID_STACK = state.GRID_STACK;
+        GRID_STACK_POSITION = state.GRID_STACK_POSITION;
+        NEXT_GRID = state.NEXT_GRID || cloneGrid(GRID_STACK[GRID_STACK_POSITION].grid);
+
+        if (DEBUG === true) {
+          console.log("loadStateFromLocalStorage", state);
+        }
+
+        return true;
+      } catch (error) {
+        console.warn("Could not load Sudoku state from localStorage", error);
+        return false;
+      }
+    }
+
+    function clearStateFromLocalStorage() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+
+        if (DEBUG === true) {
+          console.log("clearStateFromLocalStorage");
+        }
+      } catch (error) {
+        console.warn("Could not clear Sudoku state from localStorage", error);
+      }
+    }
+
+    function createUniquenessSets() {
+      const sets = [];
+
+      for (let boxRow = 0; boxRow < 3; boxRow++) {
+        for (let boxCol = 0; boxCol < 3; boxCol++) {
+          const positions = [];
+
+          for (let localRow = 1; localRow <= 3; localRow++) {
+            for (let localCol = 1; localCol <= 3; localCol++) {
+              positions.push({
+                row: boxRow * 3 + localRow,
+                col: boxCol * 3 + localCol
+              });
+            }
+          }
+
+          sets.push({
+            type: "blk",
+            positions
+          });
+        }
+      }
+
+      for (let row = 1; row <= 9; row++) {
+        const positions = [];
+
+        for (let col = 1; col <= 9; col++) {
+          positions.push({ row, col });
+        }
+
+        sets.push({
+          type: "row",
+          positions
+        });
+      }
+
+      for (let col = 1; col <= 9; col++) {
+        const positions = [];
+
+        for (let row = 1; row <= 9; row++) {
+          positions.push({ row, col });
+        }
+
+        sets.push({
+          type: "col",
+          positions
+        });
+      }
+
+      return sets;
+    }
+
+    function createEmptyGrid() {
+      const grid = {};
+
+      for (let row = 1; row <= 9; row++) {
+        grid[row] = {};
+
+        for (let col = 1; col <= 9; col++) {
+          grid[row][col] = {
+            is_fixed: false,
+            is_error: false,
+            0: EMPTY_VALUE
+          };
+
+          for (let inner = 1; inner <= 9; inner++) {
+            grid[row][col][inner] = true;
+          }
+        }
+      }
+
+      return grid;
+    }
+
+    function createEmptyStackEntry() {
+      return {
+        updatedCellRow: 0,
+        updatedCellCol: 0,
+        grid: createEmptyGrid()
+      };
+    }
+
+    function cloneGrid(grid) {
+      return JSON.parse(JSON.stringify(grid));
+    }
+
+    function currentGridEntry() {
+      return GRID_STACK[GRID_STACK_POSITION];
+    }
+
+    function currentGrid() {
+      return currentGridEntry().grid;
+    }
+
+    function selectedCellData() {
+      if (SELECTED_ROW === 0 || SELECTED_COL === 0) return null;
+      return currentGrid()[SELECTED_ROW][SELECTED_COL];
+    }
+
+    function resetAppState() {
+      FIXED_MODE = true;
+      SELECTED_ROW = 0;
+      SELECTED_COL = 0;
+      GRID_STACK = [createEmptyStackEntry()];
+      GRID_STACK_POSITION = 0;
+      setNextGridFromCurrentPosition();
+      updateButtonEnabled();
+      debugLog("resetAppState", {});
+    }
+
+    function updateButtonEnabled() {
+      const hasSelection = SELECTED_ROW !== 0 && SELECTED_COL !== 0;
+      const selectedCell = selectedCellData();
+      const selectedIsFixed = selectedCell ? selectedCell.is_fixed : false;
+      const selectedIsEmpty = selectedCell ? selectedCell[0] === EMPTY_VALUE : true;
+      const isAtInitialEmptyGrid =
+        GRID_STACK.length === 1 &&
+        GRID_STACK[0].updatedCellRow === 0 &&
+        GRID_STACK[0].updatedCellCol === 0;
+
+      for (let digit = 1; digit <= 9; digit++) {
+        BUTTON_ENABLED[digit] = hasSelection && (FIXED_MODE || !selectedIsFixed);
+      }
+
+      BUTTON_ENABLED[EMPTY_VALUE] =
+        hasSelection &&
+        !selectedIsEmpty &&
+        (FIXED_MODE || !selectedIsFixed);
+
+      BUTTON_ENABLED.undo = GRID_STACK_POSITION > 0;
+      BUTTON_ENABLED.redo = GRID_STACK_POSITION < GRID_STACK.length - 1;
+      BUTTON_ENABLED.reset = !isAtInitialEmptyGrid;
+
+      if (DEBUG === true) {
+        console.log("updateButtonEnabled", {
+          BUTTON_ENABLED,
+          GRID_STACK_POSITION,
+          GRID_STACK_LENGTH: GRID_STACK.length
+        });
+      }
+    }
+
+    function setGridCellValue(row, col, value) {
+      const cell = NEXT_GRID[row][col];
+      cell[0] = value;
+      cell.is_error = false;
+
+      for (let inner = 1; inner <= 9; inner++) {
+        cell[inner] = value === EMPTY_VALUE;
+      }
+
+      debugLog("setGridCellValue", {
+        row,
+        col,
+        value
+      });
+    }
+
+    function clearGridErrors() {
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          NEXT_GRID[row][col].is_error = false;
+        }
+      }
+
+      debugLog("clearGridErrors", {});
+    }
+
+    function markDuplicateErrorsInUnit(cells) {
+      const seen = {};
+      let foundDuplicate = false;
+
+      for (const { row, col } of cells) {
+        const value = NEXT_GRID[row][col][0];
+
+        if (value === EMPTY_VALUE) continue;
+
+        if (!seen[value]) {
+          seen[value] = [];
+        }
+
+        seen[value].push({ row, col });
+      }
+
+      for (const value in seen) {
+        if (seen[value].length <= 1) continue;
+
+        foundDuplicate = true;
+
+        for (const { row, col } of seen[value]) {
+          NEXT_GRID[row][col].is_error = true;
+        }
+      }
+
+      debugLog("markDuplicateErrorsInUnit", {
+        cells,
+        foundDuplicate
+      });
+
+      return foundDuplicate;
+    }
+
+    function markDuplicateErrors() {
+      clearGridErrors();
+
+      let foundDuplicate = false;
+
+      for (const uniquenessSet of UNIQUENESS_SETS) {
+        const hasDuplicate = markDuplicateErrorsInUnit(
+          uniquenessSet.positions
+        );
+
+        foundDuplicate = foundDuplicate || hasDuplicate;
+      }
+
+      debugLog("markDuplicateErrors", {
+        foundDuplicate
+      });
+
+      return foundDuplicate;
+    }
+
+    function markNoCandidateErrors() {
+      let foundNoCandidateError = false;
+
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = NEXT_GRID[row][col];
+
+          let hasAnyCandidate = false;
+
+          for (let inner = 1; inner <= 9; inner++) {
+            if (cell[inner] === true) {
+              hasAnyCandidate = true;
+              break;
+            }
+          }
+
+          if (!hasAnyCandidate) {
+            cell.is_error = true;
+            foundNoCandidateError = true;
+          }
+        }
+      }
+
+      debugLog("markNoCandidateErrors", {
+        foundNoCandidateError
+      });
+
+      return foundNoCandidateError;
+    }
+
+    function assignMasks() {
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = NEXT_GRID[row][col];
+
+          if (cell[0] !== EMPTY_VALUE) {
+            cell.value_mask = 1 << (cell[0] - 1);
+          } else {
+            cell.value_mask = FULL_MASK;
+          }
+
+          cell.filter_mask = FULL_MASK;
+        }
+      }
+
+      debugLog("assignMasks", {});
+    }
+
+    function bit_count(mask) {
+      let count = 0;
+
+      for (let bit = 0; bit <= 8; bit++) {
+        if (mask & (1 << bit)) {
+          count += 1;
+        }
+      }
+
+      if (DEBUG === true) {
+        console.log("bit_count", { mask, count });
+      }
+
+      return count;
+    }
+
+    function invert_mask(mask) {
+      let copiedMask = 0;
+
+      for (let bit = 0; bit <= 8; bit++) {
+        if (mask & (1 << bit)) {
+          copiedMask |= 1 << bit;
+        }
+      }
+
+      const inverted = copiedMask ^ FULL_MASK;
+
+      if (DEBUG === true) {
+        console.log("invert_mask", { mask, inverted });
+      }
+
+      return inverted;
+    }
+
+    function subset_based_elimination() {
+      for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+        for (const uniquenessSet of UNIQUENESS_SETS) {
+          for (let valueFilter = 1; valueFilter < (1 << 9); valueFilter++) {
+            const selectedIdxs = [];
+            const unselectedIdxs = [];
+
+            for (let idx = 0; idx < 9; idx++) {
+              if (valueFilter & (1 << idx)) {
+                selectedIdxs.push(idx);
+              } else {
+                unselectedIdxs.push(idx);
+              }
+            }
+
+            let unionMask = 0;
+
+            for (const idx of selectedIdxs) {
+              const position = uniquenessSet.positions[idx];
+              const row = position.row;
+              const col = position.col;
+
+              unionMask |= NEXT_GRID[row][col].value_mask;
+            }
+
+            if (bit_count(unionMask) === selectedIdxs.length) {
+              const invertedUnionMask = invert_mask(unionMask);
+
+              for (const idx of unselectedIdxs) {
+                const position = uniquenessSet.positions[idx];
+                const row = position.row;
+                const col = position.col;
+
+                NEXT_GRID[row][col].filter_mask &= invertedUnionMask;
+              }
+            }
+          }
+        }
+
+        let numUpdates = 0;
+
+        for (let row = 1; row <= 9; row++) {
+          for (let col = 1; col <= 9; col++) {
+            const cell = NEXT_GRID[row][col];
+
+            if (cell.value_mask & invert_mask(cell.filter_mask)) {
+              numUpdates += 1;
+              cell.value_mask &= cell.filter_mask;
+            }
+          }
+        }
+
+        debugLog("subset_based_elimination_iteration", {
+          iteration,
+          numUpdates
+        });
+
+        if (numUpdates === 0) {
+          break;
+        }
+      }
+
+      debugLog("subset_based_elimination", {});
+    }
+
+    function singleValueFromMask(mask) {
+      if (bit_count(mask) !== 1) {
+        return EMPTY_VALUE;
+      }
+
+      for (let inner = 1; inner <= 9; inner++) {
+        if (mask & (1 << (inner - 1))) {
+          if (DEBUG === true) {
+            console.log("singleValueFromMask", { mask, inner });
+          }
+
+          return inner;
+        }
+      }
+
+      if (DEBUG === true) {
+        console.log("singleValueFromMask", { mask, inner: EMPTY_VALUE });
+      }
+
+      return EMPTY_VALUE;
+    }
+
+    function applyMasksToCandidates() {
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = NEXT_GRID[row][col];
+
+          if (cell[0] !== EMPTY_VALUE) {
+            for (let inner = 1; inner <= 9; inner++) {
+              cell[inner] = inner === cell[0];
+            }
+          } else {
+            for (let inner = 1; inner <= 9; inner++) {
+              cell[inner] = Boolean(cell.value_mask & (1 << (inner - 1)));
+            }
+          }
+
+          delete cell.value_mask;
+          delete cell.filter_mask;
+        }
+      }
+
+      debugLog("applyMasksToCandidates", {});
+    }
+
+    function autoFillSingleCandidateCells() {
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = NEXT_GRID[row][col];
+
+          if (cell[0] !== EMPTY_VALUE) continue;
+          if (cell.is_fixed) continue;
+
+          let count = 0;
+          let lastInner = EMPTY_VALUE;
+
+          for (let inner = 1; inner <= 9; inner++) {
+            if (cell[inner] === true) {
+              count += 1;
+              lastInner = inner;
+            }
+          }
+
+          if (count === 1) {
+            setGridCellValue(row, col, lastInner);
+          }
+        }
+      }
+
+      debugLog("autoFillSingleCandidateCells", {});
+    }
+
+    function solver() {
+      const hasDuplicateErrors = markDuplicateErrors();
+
+      if (hasDuplicateErrors) {
+        debugLog("solver", {
+          hasDuplicateErrors
+        });
+        return;
+      }
+
+      assignMasks();
+      subset_based_elimination();
+      applyMasksToCandidates();
+
+      debugLog("solver", {
+        hasDuplicateErrors
+      });
+    }
+
+    function trimFutureStackIfNeeded() {
+      if (GRID_STACK_POSITION < GRID_STACK.length - 1) {
+        GRID_STACK = GRID_STACK.slice(0, GRID_STACK_POSITION + 1);
+      }
+    }
+
+    function pushUpdatedGrid(row, col, value, markFixed) {
+      trimFutureStackIfNeeded();
+
+      const previousEntry = currentGridEntry();
+
+      if (
+        previousEntry.updatedCellRow === 0 &&
+        previousEntry.updatedCellCol === 0
+      ) {
+        GRID_STACK = [previousEntry];
+        GRID_STACK_POSITION = 0;
+      }
+
+      setNextGridFromCurrentPosition();
+
+      setGridCellValue(row, col, value);
+
+      if (markFixed) {
+        NEXT_GRID[row][col].is_fixed = value !== EMPTY_VALUE;
+      }
+
+      solver();
+      markNoCandidateErrors();
+
+      if (value !== EMPTY_VALUE) {
+        autoFillSingleCandidateCells();
+      }
+
+      GRID_STACK.push({
+        updatedCellRow: row,
+        updatedCellCol: col,
+        grid: cloneGrid(NEXT_GRID)
+      });
+
+      GRID_STACK_POSITION = GRID_STACK.length - 1;
+
+      debugLog("pushUpdatedGrid", {
+        row,
+        col,
+        value,
+        markFixed
+      });
+    }
+
+    function pushFixedToggleGrid(row, col) {
+      trimFutureStackIfNeeded();
+
+      setNextGridFromCurrentPosition();
+      NEXT_GRID[row][col].is_fixed = !NEXT_GRID[row][col].is_fixed;
+      solver();
+      markNoCandidateErrors();
+
+      GRID_STACK.push({
+        updatedCellRow: row,
+        updatedCellCol: col,
+        grid: cloneGrid(NEXT_GRID)
+      });
+
+      GRID_STACK_POSITION = GRID_STACK.length - 1;
+
+      debugLog("pushFixedToggleGrid", {
+        row,
+        col
+      });
+    }
+
+    function pushEmptyGridAndResetSelection() {
+      trimFutureStackIfNeeded();
+
+      GRID_STACK.push(createEmptyStackEntry());
+      GRID_STACK_POSITION = GRID_STACK.length - 1;
+      SELECTED_ROW = 0;
+      SELECTED_COL = 0;
+      setNextGridFromCurrentPosition();
+      debugLog("pushEmptyGridAndResetSelection", {});
+    }
+
+    function render() {
+      updateButtonEnabled();
+
+      document
+        .getElementById("modeToggle")
+        .classList.toggle("solve", !FIXED_MODE);
+
+      document.getElementById("undoButton").disabled = !BUTTON_ENABLED.undo;
+      document.getElementById("redoButton").disabled = !BUTTON_ENABLED.redo;
+      document.getElementById("resetButton").disabled = !BUTTON_ENABLED.reset;
+
+      renderGrid();
+      renderNumberPad();
+
+      debugLog("render", {});
+      saveStateToLocalStorage();
+    }
+
+    function renderGrid() {
+      const sudoku = document.getElementById("sudoku");
+      const grid = currentGrid();
+
+      sudoku.innerHTML = "";
+
+      for (let boxRow = 0; boxRow < 3; boxRow++) {
+        for (let boxCol = 0; boxCol < 3; boxCol++) {
+          const box = document.createElement("div");
+          box.className = "box";
+
+          for (let localRow = 1; localRow <= 3; localRow++) {
+            for (let localCol = 1; localCol <= 3; localCol++) {
+              const row = boxRow * 3 + localRow;
+              const col = boxCol * 3 + localCol;
+
+              box.appendChild(createCellElement(row, col, grid[row][col]));
+            }
+          }
+
+          sudoku.appendChild(box);
+        }
+      }
+    }
+
+    function createCellElement(row, col, cellData) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+
+      if (cellData[0] !== EMPTY_VALUE) cell.classList.add("filled");
+      if (cellData.is_fixed) cell.classList.add("fixed");
+      if (cellData.is_error) cell.classList.add("error");
+      if (SELECTED_ROW === row && SELECTED_COL === col) cell.classList.add("selected");
+
+      const candidateLayer = document.createElement("div");
+      candidateLayer.className = "candidate-layer";
+
+      for (let inner = 1; inner <= 9; inner++) {
+        const candidate = document.createElement("div");
+        candidate.className = "candidate";
+        candidate.dataset.inner = inner;
+        candidate.textContent = cellData[inner] ? inner : "";
+        candidateLayer.appendChild(candidate);
+      }
+
+      const finalNumber = document.createElement("div");
+      finalNumber.className = "final-number";
+      finalNumber.dataset.inner = 0;
+      finalNumber.textContent = cellData[0] || "";
+
+      cell.appendChild(candidateLayer);
+      cell.appendChild(finalNumber);
+
+      attachCellGestureHandlers(cell, row, col);
+
+      return cell;
+    }
+
+    function renderNumberPad() {
+      const numberPad = document.getElementById("numberPad");
+      numberPad.innerHTML = "";
+
+      for (let digit = 1; digit <= 9; digit++) {
+        numberPad.appendChild(createPadButton(String(digit), digit, "number"));
+      }
+
+      numberPad.appendChild(createPadButton("×", EMPTY_VALUE, "clear", true));
+    }
+
+    function createPadButton(label, value, action, systemFont = false) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.dataset.action = action;
+
+      if (systemFont) button.classList.add("system-icon");
+      if (value !== null) button.dataset.value = value;
+
+      if (action === "number" || action === "clear") {
+        button.disabled = !BUTTON_ENABLED[value];
+      }
+
+
+      attachButtonGestureHandlers(button, value, action);
+
+      return button;
+    }
+
+    function gestureHandler(eventType, payload = {}) {
+      debugLog("gestureHandler:start", {
+        eventType,
+        payload
+      });
+      if (eventType === "toggle-mode") {
+        FIXED_MODE = !FIXED_MODE;
+        SELECTED_ROW = 0;
+        SELECTED_COL = 0;
+        render();
+        return;
+      }
+
+      if (eventType === "cell-click") {
+        const { row, col } = payload;
+
+        if (SELECTED_ROW === row && SELECTED_COL === col) {
+          SELECTED_ROW = 0;
+          SELECTED_COL = 0;
+        } else {
+          SELECTED_ROW = row;
+          SELECTED_COL = col;
+        }
+
+        render();
+        return;
+      }
+
+      if (eventType === "cell-long-click") {
+        const { row, col } = payload;
+
+        SELECTED_ROW = row;
+        SELECTED_COL = col;
+        pushFixedToggleGrid(row, col);
+
+        render();
+        return;
+      }
+
+      if (eventType === "non-cell-click") {
+        SELECTED_ROW = 0;
+        SELECTED_COL = 0;
+        render();
+        return;
+      }
+
+      if (eventType === "number-click") {
+        const { value } = payload;
+
+        updateButtonEnabled();
+
+        if (!BUTTON_ENABLED[value]) return;
+
+        if (FIXED_MODE) {
+          pushUpdatedGrid(SELECTED_ROW, SELECTED_COL, value, true, value !== EMPTY_VALUE);
+        } else {
+          pushUpdatedGrid(SELECTED_ROW, SELECTED_COL, value, false, value !== EMPTY_VALUE);
+        }
+
+        render();
+        return;
+      }
+
+      if (eventType === "undo-click") {
+        if (BUTTON_ENABLED.undo && GRID_STACK_POSITION > 0) {
+          GRID_STACK_POSITION -= 1;
+          setNextGridFromCurrentPosition();
+        }
+
+        render();
+        return;
+      }
+
+      if (eventType === "redo-click") {
+        if (BUTTON_ENABLED.redo && GRID_STACK_POSITION < GRID_STACK.length - 1) {
+          GRID_STACK_POSITION += 1;
+          setNextGridFromCurrentPosition();
+        }
+
+        render();
+        return;
+      }
+
+      if (eventType === "reset-click") {
+        updateButtonEnabled();
+        if (!BUTTON_ENABLED.reset) return;
+
+        FIXED_MODE = true;
+        pushEmptyGridAndResetSelection();
+        render();
+        return;
+      }
+
+      if (eventType === "reset-long-click") {
+        updateButtonEnabled();
+        if (!BUTTON_ENABLED.reset) return;
+
+        FIXED_MODE = true;
+        resetAppState();
+        render();
+      }
+    }
+
+    function attachCellGestureHandlers(cell, row, col) {
+      cell.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+
+        longPressFired = false;
+
+        longPressTimer = window.setTimeout(() => {
+          longPressFired = true;
+          gestureHandler("cell-long-click", { row, col });
+        }, LONG_PRESS_MS);
+
+        cell.setPointerCapture(event.pointerId);
+      });
+
+      cell.addEventListener("pointerup", () => {
+        window.clearTimeout(longPressTimer);
+
+        if (!longPressFired) {
+          gestureHandler("cell-click", { row, col });
+        }
+      });
+
+      cell.addEventListener("pointercancel", () => window.clearTimeout(longPressTimer));
+      cell.addEventListener("lostpointercapture", () => window.clearTimeout(longPressTimer));
+    }
+
+    function attachButtonGestureHandlers(button, value, action) {
+      button.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+
+        if (button.disabled) return;
+
+        button.classList.add("is-pressing");
+        button.setPointerCapture(event.pointerId);
+      });
+
+      button.addEventListener("pointerup", () => {
+        button.classList.remove("is-pressing");
+
+        if (button.disabled) return;
+
+        if (action === "number" || action === "clear") {
+          gestureHandler("number-click", { value });
+        }
+
+      });
+
+      button.addEventListener("pointercancel", () => button.classList.remove("is-pressing"));
+      button.addEventListener("lostpointercapture", () => button.classList.remove("is-pressing"));
+    }
+
+    function attachToolbarIconHandler(buttonId, eventName) {
+      const button = document.getElementById(buttonId);
+
+      button.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+
+        if (button.disabled) return;
+
+        button.classList.add("is-pressing");
+        button.setPointerCapture(event.pointerId);
+
+        longPressFired = false;
+
+        if (eventName === "reset-click") {
+          longPressTimer = window.setTimeout(() => {
+            longPressFired = true;
+            button.classList.remove("is-pressing");
+            gestureHandler("reset-long-click");
+          }, LONG_PRESS_MS);
+        }
+      });
+
+      button.addEventListener("pointerup", () => {
+        window.clearTimeout(longPressTimer);
+        button.classList.remove("is-pressing");
+
+        if (!button.disabled && !longPressFired) {
+          gestureHandler(eventName);
+        }
+      });
+
+      button.addEventListener("pointercancel", () => {
+        window.clearTimeout(longPressTimer);
+        button.classList.remove("is-pressing");
+      });
+
+      button.addEventListener("lostpointercapture", () => {
+        window.clearTimeout(longPressTimer);
+        button.classList.remove("is-pressing");
+      });
+    }
+
+    function attachGlobalGestureHandlers() {
+      document.getElementById("modeToggle").addEventListener("click", (event) => {
+        event.stopPropagation();
+        gestureHandler("toggle-mode");
+      });
+
+      attachToolbarIconHandler("undoButton", "undo-click");
+      attachToolbarIconHandler("redoButton", "redo-click");
+      attachToolbarIconHandler("resetButton", "reset-click");
+
+      document.addEventListener("pointerdown", (event) => {
+        const clickedCell = event.target.closest(".cell");
+        const clickedPad = event.target.closest("#numberPad button");
+        const clickedToggle = event.target.closest("#modeToggle");
+        const clickedToolbarIcon = event.target.closest(".toolbar-icon");
+
+        if (!clickedCell && !clickedPad && !clickedToggle && !clickedToolbarIcon) {
+          gestureHandler("non-cell-click");
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+          gestureHandler(event.shiftKey ? "redo-click" : "undo-click");
+          return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
+          gestureHandler("redo-click");
+          return;
+        }
+
+        if (/^[1-9]$/.test(event.key)) {
+          gestureHandler("number-click", { value: Number(event.key) });
+        }
+
+        if (
+          event.key === "0" ||
+          event.key === "Backspace" ||
+          event.key === "Delete"
+        ) {
+          gestureHandler("number-click", { value: EMPTY_VALUE });
+        }
+      });
+    }
+
+    if (!loadStateFromLocalStorage()) {
+      resetAppState();
+    }
+
+    if (!NEXT_GRID) {
+      setNextGridFromCurrentPosition();
+    }
+
+    attachGlobalGestureHandlers();
+    render();
+  </script>
+</body>
+</html>
