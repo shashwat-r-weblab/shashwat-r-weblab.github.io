@@ -206,7 +206,6 @@
       border-radius: var(--thickness);
       gap: 0;
       background: var(--bg-white);
-      user-select: none;
       touch-action: manipulation;
     }
 
@@ -365,6 +364,7 @@
       gap: var(--layout-gap);
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       overflow: hidden;
+      user-select: none;
     }
 
 </style>
@@ -1032,7 +1032,15 @@
       trimFutureStackIfNeeded();
 
       setNextGridFromCurrentPosition();
-      NEXT_GRID[row][col].is_fixed = !NEXT_GRID[row][col].is_fixed;
+
+      if (NEXT_GRID[row][col][0] === EMPTY_VALUE) {
+        NEXT_GRID[row][col].is_fixed = false;
+      } else {
+        NEXT_GRID[row][col].is_fixed = !NEXT_GRID[row][col].is_fixed;
+        SELECTED_ROW = 0;
+        SELECTED_COL = 0;
+      }
+
       solver();
       markNoCandidateErrors();
 
