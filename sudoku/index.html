@@ -12,14 +12,16 @@
 
     :root {
       --available-width: 100vw;
-      --game-size: min(calc(var(--available-width) / 1.08), 100dvh * 0.66);
-      --page-padding: calc(var(--game-size) * 0.04);
-      --cell-size: calc(var(--game-size) / 9);
-      --thickness: calc(var(--cell-size) / 8);
-      --header-size: calc(var(--cell-size) * 0.55);
-      --toolbar-height: calc(var(--cell-size) * 0.72);
-      --pad-button-size: calc(var(--cell-size) * 0.72);
-      --layout-gap: calc(var(--thickness) * 1.5);
+      --game-width: min(calc(var(--available-width) / 1.08), 100dvh * 0.62);
+      --page-padding: calc(var(--game-width) * 0.04);
+      --max-button-size: calc(var(--game-width) / 9);
+      --grid-thickness: calc(var(--max-button-size) / 8);
+      --header-size: calc(var(--max-button-size) * 0.55);
+      --toolbar-height: calc(var(--max-button-size) + 2 * var(--grid-thickness));
+      --toggle-width: calc(var(--max-button-size) * 4);
+      --toggle-height: var(--max-button-size);
+      --toolbar-button-size: calc(var(--max-button-size) - 2 * var(--grid-thickness));
+      --number-pad-button-height: calc(3 * var(--max-button-size));
 
       --theme-hue: 38;
       --theme-light: hsl(var(--theme-hue) 70% 50%);
@@ -75,7 +77,7 @@
     }
 
     h1 {
-      margin: 0 0 calc(var(--thickness) * 0.5);
+      margin: var(--grid-thickness);
       flex: 0 0 auto;
       height: var(--header-size);
       line-height: var(--header-size);
@@ -84,7 +86,7 @@
     }
 
     .toolbar {
-      width: min(var(--game-size), calc(100vw - (2 * var(--page-padding))));
+      width: min(var(--game-width), calc(100vw - (2 * var(--page-padding))));
       height: var(--toolbar-height);
       flex: 0 0 var(--toolbar-height);
       display: grid;
@@ -96,7 +98,6 @@
     .toolbar-left {
       display: flex;
       justify-content: flex-start;
-      gap: 8px;
     }
 
     .toolbar-center {
@@ -111,13 +112,15 @@
 
     .mode-toggle {
       position: relative;
-      width: calc(var(--toolbar-height) * 3.9);
+      width: var(--toggle-width);
       height: var(--toolbar-height);
       border: 0;
-      border-radius: 999px;
-      background: var(--bg-white);
+      background: transparent;
       cursor: pointer;
-      padding: 0;
+      padding-top: var(--grid-thickness);
+      padding-bottom: var(--grid-thickness);
+      padding-left: 0;
+      padding-right: 0;
       font-family: inherit;
       font-weight: 900;
       overflow: hidden;
@@ -126,7 +129,7 @@
     .toggle-label {
       position: absolute;
       top: 0;
-      width: 50%;
+      width: calc(50% - var(--grid-thickness));
       height: 100%;
       display: flex;
       align-items: center;
@@ -139,12 +142,14 @@
     }
 
     .toggle-label.create {
-      left: 0;
+      left: var(--grid-thickness);
+      width: calc(50% - var(--grid-thickness));
       color: var(--text-light);
     }
 
     .toggle-label.solve {
-      right: 0;
+      left: 50%;
+      width: calc(50% - var(--grid-thickness));
     }
 
     .mode-toggle.solve .toggle-label.create {
@@ -155,56 +160,82 @@
       color: var(--text-light);
     }
 
+    .toggle-base {
+      position: absolute;
+      top: var(--grid-thickness);
+      left: 0;
+      width: var(--toggle-width);
+      height: var(--toggle-height);
+      border-radius: 999px;
+      background: var(--bg-white);
+      z-index: 1;
+    }
+
     .toggle-circle {
       position: absolute;
-      top: calc(var(--toolbar-height) / 11);
-      left: calc(var(--toolbar-height) / 11);
-      width: calc((var(--toolbar-height) * 3.9 - (var(--toolbar-height) / 5.5)) / 2);
-      height: calc(var(--toolbar-height) * 0.82);
+      top: calc(2 * var(--grid-thickness));
+      left: var(--grid-thickness);
+      width: calc(var(--toggle-width) / 2 - var(--grid-thickness));
+      height: var(--toolbar-button-size);
       border-radius: 999px;
-      background: var(--bg-body);
-      transition: transform 160ms ease;
+      background: var(--bg-fixed);
+      transition: transform 160ms ease, background-color 160ms ease;
       z-index: 1;
     }
 
     .mode-toggle.solve .toggle-circle {
-      transform: translateX(calc((var(--toolbar-height) * 3.9 - (var(--toolbar-height) / 5.5)) / 2));
+      background: var(--bg-filled);
+      transform: translateX(calc(var(--toggle-width) / 2 - var(--grid-thickness)));
+    }
+
+    .toolbar-button {
+      width: var(--max-button-size);
+      height: var(--toolbar-height);
+      padding-bottom: calc(2 * var(--grid-thickness));
+      padding-top: calc(2 * var(--grid-thickness));
+      padding-left: var(--grid-thickness);
+      padding-right: var(--grid-thickness);
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
     }
 
     .toolbar-icon {
-      width: calc(var(--toolbar-height) * 0.82);
-      height: calc(var(--toolbar-height) * 0.82);
-      border: 0;
+      width: var(--toolbar-button-size);
+      height: var(--toolbar-button-size);
       border-radius: 999px;
       background: var(--bg-white);
       color: var(--text-dark);
-      cursor: pointer;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: calc(var(--toolbar-height) * 0.48);
+      font-size: calc(var(--max-button-size) * 0.48);
       font-weight: 700;
       line-height: 1;
-      padding: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
-    .toolbar-icon.is-pressing {
+    .toolbar-button.is-pressing .toolbar-icon {
       background: var(--bg-white-light);
     }
 
-    .toolbar-icon:disabled {
+    .toolbar-button:disabled {
       opacity: 0.45;
       cursor: default;
     }
 
     #sudoku {
-      width: var(--game-size);
-      height: var(--game-size);
-      flex: 0 0 var(--game-size);
+      width: var(--game-width);
+      height: var(--game-width);
+      flex: 0 0 var(--game-width);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
-      padding: calc(var(--thickness) / 2);
-      border-radius: var(--thickness);
-      gap: 0;
+      padding: calc(var(--grid-thickness) / 2);
+      border-radius: var(--grid-thickness);
       background: var(--bg-white);
     }
 
@@ -212,10 +243,10 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
-      gap: var(--thickness);
-      padding: var(--thickness);
-      margin: calc(var(--thickness) / 2);
-      border-radius: calc(var(--thickness) * 3 / 4);
+      gap: var(--grid-thickness);
+      padding: var(--grid-thickness);
+      margin: calc(var(--grid-thickness) / 2);
+      border-radius: calc(var(--grid-thickness) * 3 / 4);
       background: var(--bg-body);
     }
 
@@ -227,7 +258,7 @@
       background: var(--bg-empty);
       color: var(--text-dark);
       border: 0;
-      border-radius: calc(var(--thickness) / 2);
+      border-radius: calc(var(--grid-thickness) / 2);
       cursor: pointer;
       overflow: hidden;
       touch-action: none;
@@ -313,24 +344,25 @@
     .cell.filled .final-number { display: flex; }
 
     .number-pad {
-      width: var(--game-size);
-      height: calc(var(--pad-button-size) * 3);
-      flex: 0 0 calc(var(--pad-button-size) * 3);
+      width: var(--game-width);
+      height: calc(var(--number-pad-button-height));
+      flex: 0 0 calc(var(--number-pad-button-height));
       display: grid;
       grid-template-columns: repeat(10, 1fr);
-      gap: 0;
       margin-top: 0;
       touch-action: manipulation;
     }
 
     .number-pad button {
-      height: calc(var(--pad-button-size) * 3);
-      padding: 0;
+      height: calc(var(--number-pad-button-height));
+      padding-top: calc(2 * var(--grid-thickness));
+      padding-left: var(--grid-thickness);
+      padding-right: var(--grid-thickness);
       border: 0;
       background: transparent;
       color: var(--text-dark);
       font-family: inherit;
-      font-size: calc(var(--pad-button-size) * 0.5);
+      font-size: calc(var(--max-button-size) * 0.5);
       font-weight: 900;
       cursor: pointer;
       touch-action: none;
@@ -340,9 +372,9 @@
     }
 
     .number-pad button .pad-key {
-      width: var(--pad-button-size);
-      height: var(--pad-button-size);
-      border-radius: calc(var(--thickness) / 2);
+      width: calc(var(--game-width) / 10 - 2 * var(--grid-thickness));
+      height: calc(var(--game-width) / 10 - 2 * var(--grid-thickness));
+      border-radius: calc(var(--grid-thickness) / 2);
       background: var(--bg-white);
       color: var(--text-dark);
       display: flex;
@@ -365,14 +397,13 @@
     }
 
     #gameRoot {
-      width: var(--game-size);
+      width: var(--game-width);
       height: 100dvh;
       max-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: var(--layout-gap);
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       overflow: hidden;
     }
@@ -402,12 +433,13 @@
 
   <div class="toolbar">
     <div class="toolbar-left">
-      <button id="undoButton" class="toolbar-icon" type="button" aria-label="Undo">←</button>
-      <button id="redoButton" class="toolbar-icon" type="button" aria-label="Redo">→</button>
+      <button id="undoButton" class="toolbar-button" type="button"><span class="toolbar-icon">←</span></button>
+      <button id="redoButton" class="toolbar-button" type="button"><span class="toolbar-icon">→</span></button>
     </div>
 
     <div class="toolbar-center">
       <button id="modeToggle" class="mode-toggle" type="button" aria-label="Toggle Create and Solve mode">
+        <span class="toggle-base"></span>
         <span class="toggle-circle"></span>
         <span class="toggle-label create">Create</span>
         <span class="toggle-label solve">Solve</span>
@@ -415,7 +447,7 @@
     </div>
 
     <div class="toolbar-right">
-      <button id="resetButton" class="toolbar-icon" type="button" aria-label="Reset grid">↻</button>
+      <button id="resetButton" class="toolbar-button" type="button"><span class="toolbar-icon">↻</span></button>
     </div>
   </div>
 
@@ -1421,7 +1453,7 @@
         const clickedCell = event.target.closest(".cell");
         const clickedPad = event.target.closest("#numberPad button");
         const clickedToggle = event.target.closest("#modeToggle");
-        const clickedToolbarIcon = event.target.closest(".toolbar-icon");
+        const clickedToolbarIcon = event.target.closest(".toolbar-button");
 
         if (!clickedCell && !clickedPad && !clickedToggle && !clickedToolbarIcon) {
           gestureHandler("non-cell-click");
