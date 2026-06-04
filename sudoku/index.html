@@ -12,7 +12,7 @@
 
     :root {
       --available-width: 100vw;
-      --game-size: min(calc(var(--available-width) / 1.08), 100dvh * 0.72);
+      --game-size: min(calc(var(--available-width) / 1.08), 100dvh * 0.66);
       --page-padding: calc(var(--game-size) * 0.04);
       --cell-size: calc(var(--game-size) / 9);
       --thickness: calc(var(--cell-size) / 8);
@@ -75,11 +75,11 @@
     }
 
     h1 {
-      margin: 0;
+      margin: 0 0 calc(var(--thickness) * 0.5);
       flex: 0 0 auto;
       height: var(--header-size);
       line-height: var(--header-size);
-      font-size: calc(var(--header-size) * 0.72);
+      font-size: calc(var(--header-size) * 1.1);
       font-weight: 900;
     }
 
@@ -314,28 +314,40 @@
 
     .number-pad {
       width: var(--game-size);
-      height: var(--pad-button-size);
-      flex: 0 0 var(--pad-button-size);
+      height: calc(var(--pad-button-size) * 3);
+      flex: 0 0 calc(var(--pad-button-size) * 3);
       display: grid;
       grid-template-columns: repeat(10, 1fr);
-      gap: var(--thickness);
+      gap: 0;
       margin-top: 0;
       touch-action: manipulation;
     }
 
     .number-pad button {
-      aspect-ratio: 1 / 1;
-      height: var(--pad-button-size);
+      height: calc(var(--pad-button-size) * 3);
       padding: 0;
       border: 0;
-      border-radius: calc(var(--thickness) / 2);
-      background: var(--bg-white);
+      background: transparent;
       color: var(--text-dark);
       font-family: inherit;
       font-size: calc(var(--pad-button-size) * 0.5);
       font-weight: 900;
       cursor: pointer;
       touch-action: none;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .number-pad button .pad-key {
+      width: var(--pad-button-size);
+      height: var(--pad-button-size);
+      border-radius: calc(var(--thickness) / 2);
+      background: var(--bg-white);
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .number-pad button.system-icon {
@@ -343,7 +355,7 @@
       font-weight: 700;
     }
 
-    .number-pad button.is-pressing {
+    .number-pad button.is-pressing .pad-key {
       background: var(--bg-white-light);
     }
 
@@ -1175,9 +1187,14 @@
 
     function createPadButton(label, value, action, systemFont = false) {
       const button = document.createElement("button");
+      const key = document.createElement("span");
+
       button.type = "button";
-      button.textContent = label;
       button.dataset.action = action;
+
+      key.className = "pad-key";
+      key.textContent = label;
+      button.appendChild(key);
 
       if (systemFont) button.classList.add("system-icon");
       if (value !== null) button.dataset.value = value;
