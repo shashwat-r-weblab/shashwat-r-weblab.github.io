@@ -12,7 +12,7 @@
 
     :root {
       --available-width: 100vw;
-      --game-width: min(calc(var(--available-width) / 1.08), 100dvh * 0.62);
+      --game-width: min(calc(var(--available-width) / 1.08), 100dvh * 0.60);
       --page-padding: calc(var(--game-width) * 0.04);
       --max-button-size: calc(var(--game-width) / 9);
       --grid-thickness: calc(var(--max-button-size) / 8);
@@ -78,11 +78,18 @@
 
     h1 {
       margin: var(--grid-thickness);
+      padding: calc(2 * var(--grid-thickness));
+      border-radius: calc(3 * var(--grid-thickness));
       flex: 0 0 auto;
-      height: var(--header-size);
+      height: calc(var(--header-size) + 4 * var(--grid-thickness));
       line-height: var(--header-size);
       font-size: calc(var(--header-size) * 1.1);
       font-weight: 900;
+    }
+
+    h1.solved {
+      color: var(--text-dark);
+      background: var(--bg-white);
     }
 
     .toolbar {
@@ -300,9 +307,29 @@
       background: var(--bg-fixed-error-selected);
     }
 
+    .cell.solved,
+    .cell.filled.solved,
+    .cell.fixed.solved,
+    .cell.error.solved,
+    .cell.fixed.error.solved {
+      background: var(--bg-empty);
+    }
+
+    .cell.solved .final-number,
+    .cell.solved .candidate-layer,
+    .cell.filled.solved .final-number,
+    .cell.fixed.solved .final-number,
+    .cell.fixed.solved .candidate-layer,
+    .cell.error.solved .final-number,
+    .cell.error.solved .candidate-layer,
+    .cell.fixed.error.solved .final-number,
+    .cell.fixed.error.solved .candidate-layer {
+      color: var(--text-dark);
+    }
+
     .candidate-layer {
       position: absolute;
-      inset: 2px;
+      inset: 0;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
@@ -425,11 +452,34 @@
       -webkit-text-size-adjust: 100%;
     }
 
+
+    #flashOverlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      opacity: 0;
+      background: rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    #flashOverlay.flash-active {
+      display: block;
+      animation: solvedFlash 200ms ease-out forwards;
+    }
+
+    @keyframes solvedFlash {
+      0% { opacity: 0; }
+      30% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
 </style>
 </head>
 <body>
+  <div id="flashOverlay"></div>
   <div id="gameRoot">
-  <h1>Sudoku AutoSolver</h1>
+  <h1 id="gameTitle">Sudoku AutoSolver</h1>
 
   <div class="toolbar">
     <div class="toolbar-left">
@@ -471,6 +521,7 @@
     let GRID_STACK = [createEmptyStackEntry()];
     let GRID_STACK_POSITION = 0;
     let NEXT_GRID = null;
+    let FLASHED = false;
 
     const BUTTON_ENABLED = {
       0: true,
@@ -1128,6 +1179,61 @@
       debugLog("pushEmptyGridAndResetSelection", {});
     }
 
+    function isGridSolved() {
+      const grid = currentGrid();
+
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = grid[row][col];
+
+          if (cell[0] === EMPTY_VALUE || cell.is_error === true) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    function flash() {
+      const solved = isGridSolved();
+      const title = document.getElementById("gameTitle");
+
+      if (!solved) {
+        FLASHED = false;
+        if (title) {
+          title.textContent = "Sudoku AutoSolver";
+          title.classList.remove("solved");
+        }
+        return;
+      }
+
+      if (title) {
+        title.textContent = "Sudoku Solved!";
+        title.classList.add("solved");
+      }
+
+      if (FLASHED === true) {
+        return;
+      }
+
+      const overlay = document.getElementById("flashOverlay");
+
+      if (!overlay) {
+        FLASHED = true;
+        return;
+      }
+
+      overlay.classList.remove("flash-active");
+      void overlay.offsetWidth;
+      overlay.classList.add("flash-active");
+
+      window.setTimeout(() => {
+        overlay.classList.remove("flash-active");
+        FLASHED = true;
+      }, 380);
+    }
+
     function render() {
       updateButtonEnabled();
 
@@ -1141,6 +1247,7 @@
 
       renderGrid();
       renderNumberPad();
+      flash();
 
       debugLog("render", {});
       saveStateToLocalStorage();
@@ -1149,6 +1256,7 @@
     function renderGrid() {
       const sudoku = document.getElementById("sudoku");
       const grid = currentGrid();
+      const isSolved = isGridSolved();
 
       sudoku.innerHTML = "";
 
@@ -1162,7 +1270,7 @@
               const row = boxRow * 3 + localRow;
               const col = boxCol * 3 + localCol;
 
-              box.appendChild(createCellElement(row, col, grid[row][col]));
+              box.appendChild(createCellElement(row, col, grid[row][col], isSolved));
             }
           }
 
@@ -1171,7 +1279,7 @@
       }
     }
 
-    function createCellElement(row, col, cellData) {
+    function createCellElement(row, col, cellData, isSolved) {
       const cell = document.createElement("div");
       cell.className = "cell";
       cell.dataset.row = row;
@@ -1181,6 +1289,7 @@
       if (cellData.is_fixed) cell.classList.add("fixed");
       if (cellData.is_error) cell.classList.add("error");
       if (SELECTED_ROW === row && SELECTED_COL === col) cell.classList.add("selected");
+      if (isSolved && !cellData.is_fixed) cell.classList.add("solved");
 
       const candidateLayer = document.createElement("div");
       candidateLayer.className = "candidate-layer";
