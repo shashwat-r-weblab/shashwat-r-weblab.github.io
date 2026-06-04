@@ -1289,7 +1289,7 @@
       if (cellData.is_fixed) cell.classList.add("fixed");
       if (cellData.is_error) cell.classList.add("error");
       if (SELECTED_ROW === row && SELECTED_COL === col) cell.classList.add("selected");
-      if (isSolved && !cellData.is_fixed) cell.classList.add("solved");
+      // if (isSolved && !cellData.is_fixed) cell.classList.add("solved");
 
       const candidateLayer = document.createElement("div");
       candidateLayer.className = "candidate-layer";
