@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pronunciation Viewer</title>
+  <link rel="icon" href="tab-icon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300..900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --container-width: min(50dvh, 90dvw);
+      --box-padding: calc(var(--container-width) / 25);
+      --pronunciation-font-size: calc(var(--container-width) / 24);
+      --box-radius: calc(var(--container-width) / 25);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f4f6f8;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: var(--container-width);
+      text-align: center;
+    }
+
+    .logo-block {
+      width: 100%;
+      margin-bottom: calc(var(--container-width) / 20);
+      border-radius: var(--box-radius);
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .logo-block img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .textbox {
+      width: 100%;
+      padding: var(--box-padding);
+      border: none;
+      border-radius: var(--box-radius);
+      font-size: calc(var(--container-width) / 22);
+      outline: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+
+    .display {
+      margin-top: calc(var(--container-width) / 20);
+      background: white;
+      border-radius: var(--box-radius);
+      padding: var(--box-padding);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      min-height: calc(var(--container-width) / 5);
+      text-align: left;
+    }
+
+    .bottom-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #666;
+    }
+
+    .small-spinner {
+      width: 18px;
+      height: 18px;
+      border: 3px solid #ddd;
+      border-top: 3px solid #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .pronunciation {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--container-width) / 40);
+      padding: calc(var(--container-width) / 40) 0;
+      border-bottom: 1px solid #eee;
+      flex-wrap: wrap;
+      font-size: var(--pronunciation-font-size);
+    }
+
+    .flag {
+      font-size: var(--pronunciation-font-size);
+      width: calc(var(--container-width) / 20);
+      display: inline-block;
+    }
+
+    .pronunciation-main {
+      white-space: nowrap;
+      color: #333;
+      font-size: var(--pronunciation-font-size);
+    }
+
+    .written-pronunciation {
+      font-family: "Roboto Flex", Arial, sans-serif;
+      font-size: var(--pronunciation-font-size);
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.18em;
+      align-items: center;
+    }
+
+    .pronunciation-box {
+      display: inline-block;
+      color: white;
+      border-radius: 999px;
+      padding: 0.16em 0.5em;
+      line-height: 1.15;
+      font-weight: 500;
+    }
+
+    .chunk-normal {
+      background: #b83a3a99;
+      font-weight: 300;
+    }
+
+    .chunk-minor {
+      background: #b83a3acc;
+      font-weight: 300;
+    }
+
+    .chunk-major {
+      background: #b83a3aff;
+      font-weight: 300;
+    }
+
+    .empty {
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="logo-block">
+      <img src="preview.png" alt="Pronunciation viewer logo" />
+    </div>
+
+    <input
+      type="text"
+      class="textbox"
+      id="wordInput"
+      placeholder="Type a word..."
+      autocomplete="off"
+    />
+
+    <div class="display" id="display">
+      <div class="bottom-loader">
+        <div class="small-spinner"></div>
+        <span>Loading pronunciations... 0%</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
+
+  <script>
+    let pronunciationLists = {
+      us: {},
+      uk: {}
+    };
+
+    let currentWord = "";
+    let pronunciationsLoaded = false;
+    let lastProgress = 0;
+
+    const input = document.getElementById("wordInput");
+    const display = document.getElementById("display");
+
+    input.addEventListener("input", () => {
+      currentWord = input.value.trim().toLowerCase();
+
+      if (!pronunciationsLoaded) {
+        showProgress(lastProgress);
+        return;
+      }
+
+      showPronunciations(currentWord);
+    });
+
+    document.addEventListener("keydown", async (event) => {
+      const active = document.activeElement;
+      const isInputActive = active === input;
+      const shortcutKey = event.key.toLowerCase();
+      const isShortcut = event.metaKey || event.ctrlKey;
+
+      if (event.key === "Escape") {
+        input.blur();
+        return;
+      }
+
+      if (isShortcut && shortcutKey === "v" && !isInputActive) {
+        event.preventDefault();
+
+        try {
+          const pastedText = await navigator.clipboard.readText();
+          input.focus();
+          input.value = pastedText;
+          input.dispatchEvent(new Event("input"));
+        } catch (error) {
+          console.error("Clipboard paste failed:", error);
+        }
+
+        return;
+      }
+
+      if (isShortcut && shortcutKey === "c" && !hasHighlightedText()) {
+        event.preventDefault();
+
+        try {
+          await navigator.clipboard.writeText(input.value);
+        } catch (error) {
+          console.error("Clipboard copy failed:", error);
+        }
+
+        return;
+      }
+
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (event.key === "Backspace" && active !== input) {
+        input.focus();
+        input.value = input.value.slice(0, -1);
+        input.dispatchEvent(new Event("input"));
+        event.preventDefault();
+        return;
+      }
+
+      if (
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      if (event.key.length === 1) {
+        input.focus();
+      }
+    });
+
+    function hasHighlightedText() {
+      const active = document.activeElement;
+
+      if (
+        active &&
+        (active.tagName === "INPUT" || active.tagName === "TEXTAREA")
+      ) {
+        return active.selectionStart !== active.selectionEnd;
+      }
+
+      return window.getSelection().toString().length > 0;
+    }
+
+    loadPronunciations();
+
+    async function loadPronunciations() {
+      try {
+        const [usYaml, ukYaml] = await Promise.all([
+          loadYamlCached("pronunciations_us.yaml", "pronunciations_us_yaml"),
+          loadYamlCached("pronunciations_uk.yaml", "pronunciations_uk_yaml")
+        ]);
+
+        pronunciationLists.us = jsyaml.load(usYaml) || {};
+        pronunciationLists.uk = jsyaml.load(ukYaml) || {};
+
+        pronunciationsLoaded = true;
+        showPronunciations(currentWord);
+
+      } catch (error) {
+        display.innerHTML = `
+          <div class="empty">
+            Failed to load pronunciation files
+          </div>
+        `;
+
+        console.error(error);
+      }
+    }
+
+    async function loadYamlCached(url, storageKey) {
+      const cached = localStorage.getItem(storageKey);
+
+      if (cached) {
+        showLoadingFromCache();
+        return cached;
+      }
+
+      const yamlText = await fetchYamlWithProgress(url);
+      localStorage.setItem(storageKey, yamlText);
+
+      return yamlText;
+    }
+
+    async function fetchYamlWithProgress(url) {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Could not load ${url}`);
+      }
+
+      const total = Number(response.headers.get("content-length"));
+      const reader = response.body.getReader();
+
+      let received = 0;
+      let chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        chunks.push(value);
+        received += value.length;
+
+        if (total) {
+          lastProgress = Math.round((received / total) * 100);
+          showProgress(lastProgress);
+        } else {
+          showLoading();
+        }
+      }
+
+      const blob = new Blob(chunks);
+      return await blob.text();
+    }
+
+    function showProgress(percent) {
+      display.innerHTML = `
+        <div class="bottom-loader">
+          <div class="small-spinner"></div>
+          <span>Loading pronunciations... ${percent}%</span>
+        </div>
+      `;
+    }
+
+    function showLoading() {
+      display.innerHTML = `
+        <div class="bottom-loader">
+          <div class="small-spinner"></div>
+          <span>Loading pronunciations...</span>
+        </div>
+      `;
+    }
+
+    function showLoadingFromCache() {
+      display.innerHTML = `
+        <div class="bottom-loader">
+          <div class="small-spinner"></div>
+          <span>Loading cached pronunciations...</span>
+        </div>
+      `;
+    }
+
+    const pronunciationTransformations = {
+      us: [
+        { from: "ɡ", to: "g" },
+        { from: "ɫ", to: "l" },
+        { from: "ɹ", to: "r" },
+        { from: "ŋ", to: "ng" },
+        { from: "tʃ", to: "ch" },
+        { from: "ʃ", to: "sh" },
+        { from: "j", to: "y" },
+        { from: "dʒ", to: "j" },
+        { from: "ʒ", to: "zh" },
+        { from: "oʊ", to: "o" },
+        { from: "aʊ", to: "ɑʊ" },
+        { from: "aɪ", to: "ɑɪ" },
+        { from: "eɪ", to: "ay" },
+        { from: "ɔ", to: "aw" },
+        { from: "i", to: "ee" },
+        { from: "ɪ", to: "i" },
+        { from: "u", to: "uu" },
+        { from: "ʊ", to: "u" },
+        { from: "ə", to: "a" },
+        { from: "ɑ", to: "aa" },
+        { from: "æ", to: "ai" },
+        { from: "ɝ", to: "er" },
+        { from: "ɛ", to: "e" },
+        { from: "θ", to: "th" },
+        { from: "ð", to: "∂" }
+      ],
+
+      uk: [
+        { from: "ɡʲ", to: "dʒ" },
+        { from: "ɡ", to: "g" },
+        { from: "ɬ", to: "lh" },
+        { from: "ɹ", to: "r" },
+        { from: "x", to: "kh" },
+        { from: "ŋ", to: "ng" },
+        { from: "tʃ", to: "ch" },
+        { from: "ʃ", to: "sh" },
+        { from: "j", to: "y" },
+        { from: "dʒ", to: "j" },
+        { from: "ʒ", to: "zh" },
+        { from: "a", to: "aa" },
+        { from: "eɪ", to: "ay" },
+        { from: "e", to: "ae" },
+        { from: "ɑ̃", to: "aan" },
+        { from: "ɑː", to: "aa" },
+        { from: "ɔ̃", to: "awn" },
+        { from: "ɔː", to: "aww" },
+        { from: "ɔ", to: "aw" },
+        { from: "ɒ", to: "aw" },
+        { from: "iː", to: "ee" },
+        { from: "i", to: "ee" },
+        { from: "ɪ", to: "i" },
+        { from: "uː", to: "uu" },
+        { from: "ʊ", to: "u" },
+        { from: "ə", to: "a" },
+        { from: "ɐ", to: "a" },
+        { from: "ʌ", to: "a" },
+        { from: "æ", to: "ai" },
+        { from: "ɜː", to: "er" },
+        { from: "ɛ", to: "e" },
+        { from: "θ", to: "th" },
+        { from: "ð", to: "∂" }
+      ]
+    };
+
+    function pronunciationToIntermediateRepresentation(ipa, dialect) {
+      const clean = ipa.replace(/[\/\[\]]/g, "");
+      const chunks = splitPronunciationIntoStressChunks(clean);
+
+      chunks.forEach(chunk => {
+        chunk.transformed_text = applyTransformationsToChunk(
+          chunk.original_text,
+          dialect
+        );
+      });
+
+      return chunks;
+    }
+
+    function splitPronunciationIntoStressChunks(text) {
+      const chunks = [];
+      let currentMode = "normal";
+      let currentText = "";
+
+      for (const char of text) {
+        if (char === "ˈ" || char === "ˌ") {
+          if (currentText) {
+            chunks.push({
+              mode: currentMode,
+              original_text: currentText
+            });
+          }
+
+          currentText = "";
+          currentMode = char === "ˈ" ? "major" : "minor";
+          continue;
+        }
+
+        currentText += char;
+      }
+
+      if (currentText) {
+        chunks.push({
+          mode: currentMode,
+          original_text: currentText
+        });
+      }
+
+      return chunks;
+    }
+
+    function applyTransformationsToChunk(text, dialect) {
+      let output = text;
+      const transformations = pronunciationTransformations[dialect] || [];
+
+      transformations.forEach(rule => {
+        output = replaceAllLiteral(output, rule.from, rule.to);
+      });
+
+      return output;
+    }
+
+    function replaceAllLiteral(text, from, to) {
+      return text.split(from).join(to);
+    }
+
+    function intermediateRepresentationToTextFormatting(chunks) {
+      return chunks.map(chunk => ({
+        mode: chunk.mode,
+        text: cleanTransformedChunkText(chunk.transformed_text)
+      })).filter(chunk => chunk.text.length > 0);
+    }
+
+    function cleanTransformedChunkText(text) {
+      return text
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function renderFormattedText(formattedChunks) {
+      return formattedChunks.map(chunk => {
+        const className = `pronunciation-box chunk-${chunk.mode}`;
+
+        return `
+          <span class="${className}">
+            ${escapeHtml(chunk.text)}
+          </span>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showPronunciations(word) {
+      display.innerHTML = "";
+
+      if (!word) {
+        display.innerHTML = `<div class="empty">Start typing...</div>`;
+        return;
+      }
+
+      const results = [];
+
+      const us = pronunciationLists.us[word] || [];
+      const uk = pronunciationLists.uk[word] || [];
+
+      us.forEach(p => results.push({ dialect: "us", flag: "🇺🇸", text: p }));
+      uk.forEach(p => results.push({ dialect: "uk", flag: "🇬🇧", text: p }));
+
+      if (results.length === 0) {
+        display.innerHTML = `<div class="empty">No pronunciations found</div>`;
+        return;
+      }
+
+      results.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "pronunciation";
+
+        const intermediate = pronunciationToIntermediateRepresentation(
+          item.text,
+          item.dialect
+        );
+
+        const formatted = intermediateRepresentationToTextFormatting(
+          intermediate
+        );
+
+        row.innerHTML = `
+          <span class="flag">${item.flag}</span>
+
+          <span class="pronunciation-main">
+            ${escapeHtml(item.text)}
+          </span>
+
+          <span class="written-pronunciation">
+            ${renderFormattedText(formatted)}
+          </span>
+        `;
+
+        display.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>
