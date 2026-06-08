@@ -300,15 +300,34 @@
     }
 
     async function loadYamlCached(url, storageKey) {
-      const cached = localStorage.getItem(storageKey);
+      const cacheName = "pronunciation-cache-v1";
 
-      if (cached) {
+      if (!("caches" in window)) {
+        return await fetchYamlWithProgress(url);
+      }
+
+      const cache = await caches.open(cacheName);
+      const cachedResponse = await cache.match(url);
+
+      if (cachedResponse) {
         showLoadingFromCache();
-        return cached;
+        return await cachedResponse.text();
       }
 
       const yamlText = await fetchYamlWithProgress(url);
-      localStorage.setItem(storageKey, yamlText);
+
+      try {
+        await cache.put(
+          url,
+          new Response(yamlText, {
+            headers: {
+              "Content-Type": "text/yaml"
+            }
+          })
+        );
+      } catch (error) {
+        console.warn("Could not cache YAML:", error);
+      }
 
       return yamlText;
     }
