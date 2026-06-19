@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glide N Chase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+  --background-color: #050505;
+  --hud-background-color: rgba(0, 0, 0, 0.5);
+  --control-background-color: rgba(255, 255, 255, 0.10);
+  --control-border-color: rgba(255, 255, 255, 0.45);
+  --knob-background-color: rgba(255, 255, 255, 0.78);
+  --knob-glow-color: rgba(255, 255, 255, 0.35);
+  --dot-color: rgba(255, 255, 255, 0.82);
+  --text-color: white;
+
+  --hud-left: 12px;
+  --hud-top: 12px;
+  --hud-padding: 10px 12px;
+  --hud-border-radius: 8px;
+  --hud-font-size: 13px;
+  --hud-line-height: 1.35;
+
+  --left-control-left: 28px;
+  --right-control-right: 28px;
+  --control-bottom: 34px;
+  --joystick-size: 150px;
+  --control-size: 218px;
+  --knob-size: 54px;
+  --dot-size: 10px;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: system-ui, sans-serif;
+}
+canvas { display: block; }
+
+#leftRotationControl {
+  position: fixed;
+  left: var(--left-control-left);
+  bottom: var(--control-bottom);
+  width: var(--control-size);
+  height: var(--control-size);
+  z-index: 20;
+  touch-action: none;
+}
+
+#moveJoy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--joystick-size);
+  height: var(--joystick-size);
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--control-border-color);
+  border-radius: 50%;
+  background: var(--control-background-color);
+  touch-action: none;
+}
+
+#rightRotationControl {
+  position: fixed;
+  right: var(--right-control-right);
+  bottom: var(--control-bottom);
+  width: var(--control-size);
+  height: var(--control-size);
+  z-index: 20;
+  touch-action: none;
+}
+
+#innerJoyGuide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--joystick-size);
+  height: var(--joystick-size);
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--control-border-color);
+  border-radius: 50%;
+  background: var(--control-background-color);
+  touch-action: none;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--knob-size);
+  height: var(--knob-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--knob-background-color);
+  box-shadow: 0 0 18px var(--knob-glow-color);
+  touch-action: none;
+}
+
+#lookKnob { z-index: 3; }
+
+#ringDots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 50%;
+}
+#ringDots.visible { opacity: 1; }
+
+.ringDot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  margin-left: calc(var(--dot-size) / -2);
+  margin-top: calc(var(--dot-size) / -2);
+  border-radius: 50%;
+  background: var(--dot-color);
+  box-shadow: 0 0 10px rgba(255,255,255,.35);
+}
+</style>
+</head>
+<body>
+<div id="leftRotationControl">
+  <div id="moveJoy"><div id="moveKnob" class="knob"></div></div>
+</div>
+
+<div id="rightRotationControl">
+  <div id="innerJoyGuide"></div>
+  <div id="ringDots">
+    <div class="ringDot"></div>
+    <div class="ringDot"></div>
+    <div class="ringDot"></div>
+    <div class="ringDot"></div>
+  </div>
+  <div id="lookKnob" class="knob"></div>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
+
+const CONFIG = {
+  render: {
+    backgroundColor: 0x050505,
+    maxPixelRatio: 2,
+    maxDeltaTime: 0.05
+  },
+
+  camera: {
+    fieldOfViewDegrees: 75,
+    nearClipPlane: 0.01,
+    farClipPlane: 1000,
+    eyeHeight: 1.6,
+    collisionRadius: 0.35,
+    resetHeight: 20,
+    floorMinimumY: 0.05
+  },
+
+  lighting: {
+    skyColor: 0xffffff,
+    groundColor: 0x202030,
+    hemisphereIntensity: 1.7
+  },
+
+  movement: {
+    baseMoveSpeed: 4,
+    joystickForwardSpeed: 10,
+    joystickReverseSpeed: 4,
+    keyboardForwardSpeed: 10,
+    keyboardReverseSpeed: 4
+  },
+
+  joystick: {
+    deadZone: 0,
+    inputRadiusPixels: 52,
+    visualTravelPixels: 48,
+    absoluteRotationRadiansAtFullStretch: 2.4
+  },
+
+  rightControl: {
+    ringDotRadiusPixels: 92,
+    resetAngleRadians: 0
+  },
+
+  mouse: {
+    axisAnglePixelsToRadians: 0.002
+  },
+
+  angle: {
+    fullTurnRadians: 2 * Math.PI,
+    halfTurnRadians: Math.PI,
+    quarterTurnRadians: Math.PI / 2,
+    radiansToDegrees: 180 / Math.PI
+  },
+
+  grid: {
+    halfCellCount: 12,
+    cellSize: 2,
+    lineColor: 0x66ccff
+  },
+
+  buildings: {
+    count: 50,
+    footprintWidth: 0.9,
+    footprintDepth: 0.9,
+    lowHeight: 0.35,
+    highHeight: 2.8,
+    oscillationSpeed: 1.8,
+    color: 0xff2222,
+    emissiveColor: 0x220000,
+    collisionPadding: 0.08
+  },
+
+  sphere: {
+    radius: 0.55,
+    color: 0xffff00,
+    emissiveColor: 0x555500,
+    y: 0.55,
+    touchDistance: 1.0,
+    maxPlacementAttempts: 200,
+    gridRunSpeed: 3.0,
+    directionChangeChance: 0.35
+  },
+
+  random: {
+    multiplier: 1664525,
+    increment: 1013904223,
+    unsignedIntMax: 4294967296,
+    seed: 1
+  }
+};
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(CONFIG.render.backgroundColor);
+
+const camera = new THREE.PerspectiveCamera(
+  CONFIG.camera.fieldOfViewDegrees,
+  innerWidth / innerHeight,
+  CONFIG.camera.nearClipPlane,
+  CONFIG.camera.farClipPlane
+);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, CONFIG.render.maxPixelRatio));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(
+  CONFIG.lighting.skyColor,
+  CONFIG.lighting.groundColor,
+  CONFIG.lighting.hemisphereIntensity
+));
+
+const rig = new THREE.Group();
+rig.add(camera);
+scene.add(rig);
+
+const keys = new Set();
+const joystickMoveInput = { x: 0, y: 0 };
+
+const knobDrag = {
+  active: false,
+  pointerId: null,
+  startCameraQuaternion: new THREE.Quaternion()
+};
+
+const rollDrag = {
+  active: false,
+  pointerId: null,
+  startCameraQuaternion: new THREE.Quaternion(),
+  startPointerAngleRadians: 0
+};
+
+const CAMERA_LOCAL_FORWARD_AXIS = new THREE.Vector3(0, 0, -1);
+const CAMERA_DOWN_QUATERNION = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(-Math.PI / 2, 0, 0, "XYZ")
+);
+
+addEventListener("keydown", event => keys.add(event.code));
+addEventListener("keyup", event => keys.delete(event.code));
+
+renderer.domElement.onclick = () => renderer.domElement.requestPointerLock();
+
+addEventListener("mousemove", event => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+
+  rotateByAxisAngleFromQuaternion(
+    camera.quaternion.clone(),
+    event.movementX,
+    event.movementY,
+    CONFIG.mouse.axisAnglePixelsToRadians
+  );
+});
+
+function randomUnit() {
+  CONFIG.random.seed = (CONFIG.random.seed * CONFIG.random.multiplier + CONFIG.random.increment) >>> 0;
+  return CONFIG.random.seed / CONFIG.random.unsignedIntMax;
+}
+
+function normalizeSignedAngleDifference(angleRadians) {
+  if (angleRadians > CONFIG.angle.halfTurnRadians) angleRadians -= CONFIG.angle.fullTurnRadians;
+  if (angleRadians < -CONFIG.angle.halfTurnRadians) angleRadians += CONFIG.angle.fullTurnRadians;
+  return angleRadians;
+}
+
+function makeAxisAngleRotationFromScreenVector(referenceQuaternion, inputX, inputY, radiansPerUnit) {
+  const inputMagnitude = Math.hypot(inputX, inputY);
+  if (inputMagnitude <= CONFIG.joystick.deadZone) return new THREE.Quaternion();
+
+  const normalizedInputX = inputX / inputMagnitude;
+  const normalizedInputY = inputY / inputMagnitude;
+
+  const localRotationAxis = new THREE.Vector3(
+    normalizedInputY,
+    normalizedInputX,
+    0
+  ).normalize();
+
+  const worldRotationAxis = localRotationAxis
+    .clone()
+    .applyQuaternion(referenceQuaternion)
+    .normalize();
+
+  return new THREE.Quaternion().setFromAxisAngle(
+    worldRotationAxis,
+    inputMagnitude * radiansPerUnit
+  );
+}
+
+function rotateByAxisAngleFromQuaternion(referenceQuaternion, inputX, inputY, radiansPerUnit) {
+  const rotationDelta = makeAxisAngleRotationFromScreenVector(
+    referenceQuaternion,
+    inputX,
+    inputY,
+    radiansPerUnit
+  );
+
+  camera.quaternion.copy(referenceQuaternion).premultiply(rotationDelta).normalize();
+}
+
+function makeRollRotationFromQuaternion(referenceQuaternion, rotationAngleRadians) {
+  const worldForwardAxis = CAMERA_LOCAL_FORWARD_AXIS
+    .clone()
+    .applyQuaternion(referenceQuaternion)
+    .normalize();
+
+  return new THREE.Quaternion().setFromAxisAngle(worldForwardAxis, -rotationAngleRadians);
+}
+
+function rotateRollFromQuaternion(referenceQuaternion, rotationAngleRadians) {
+  const rotationDelta = makeRollRotationFromQuaternion(referenceQuaternion, rotationAngleRadians);
+  camera.quaternion.copy(referenceQuaternion).premultiply(rotationDelta).normalize();
+}
+
+function getLocalPointerState(element, event) {
+  const bounds = element.getBoundingClientRect();
+  const centerX = bounds.left + bounds.width / 2;
+  const centerY = bounds.top + bounds.height / 2;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+
+  return {
+    dx,
+    dy,
+    radiusPixels: Math.hypot(dx, dy),
+    angleRadians: Math.atan2(dy, dx)
+  };
+}
+
+function getJoystickInputFromPointer(element, event) {
+  const pointerState = getLocalPointerState(element, event);
+
+  let x = pointerState.dx / CONFIG.joystick.inputRadiusPixels;
+  let y = pointerState.dy / CONFIG.joystick.inputRadiusPixels;
+
+  const magnitude = Math.hypot(x, y);
+
+  if (magnitude > 1) {
+    x /= magnitude;
+    y /= magnitude;
+  }
+
+  if (magnitude < CONFIG.joystick.deadZone) {
+    x = 0;
+    y = 0;
+  }
+
+  return { x, y };
+}
+
+function setupMovementJoystick() {
+  const joystick = document.getElementById("moveJoy");
+  const knob = document.getElementById("moveKnob");
+
+  let active = false;
+  let activePointerId = null;
+
+  function setJoystickInput(x, y) {
+    joystickMoveInput.x = x;
+    joystickMoveInput.y = y;
+
+    knob.style.transform =
+      `translate(calc(-50% + ${x * CONFIG.joystick.visualTravelPixels}px), calc(-50% + ${y * CONFIG.joystick.visualTravelPixels}px))`;
+  }
+
+  joystick.addEventListener("pointerdown", event => {
+    event.stopPropagation();
+    active = true;
+    activePointerId = event.pointerId;
+    joystick.setPointerCapture(activePointerId);
+  });
+
+  joystick.addEventListener("pointermove", event => {
+    if (!active || event.pointerId !== activePointerId) return;
+    event.stopPropagation();
+
+    const input = getJoystickInputFromPointer(joystick, event);
+    setJoystickInput(input.x, input.y);
+  });
+
+  function releaseJoystick(event) {
+    if (!active || event.pointerId !== activePointerId) return;
+    event.stopPropagation();
+
+    active = false;
+    activePointerId = null;
+    setJoystickInput(0, 0);
+  }
+
+  joystick.addEventListener("pointerup", releaseJoystick);
+  joystick.addEventListener("pointercancel", releaseJoystick);
+}
+
+function setupRightRotationControls() {
+  const rightControl = document.getElementById("rightRotationControl");
+  const innerGuide = document.getElementById("innerJoyGuide");
+  const lookKnob = document.getElementById("lookKnob");
+  const ringDots = document.getElementById("ringDots");
+  const ringDotItems = Array.from(document.querySelectorAll(".ringDot"));
+
+  function setLookKnobVisual(x, y) {
+    lookKnob.style.transform =
+      `translate(calc(-50% + ${x * CONFIG.joystick.visualTravelPixels}px), calc(-50% + ${y * CONFIG.joystick.visualTravelPixels}px))`;
+  }
+
+  function updateRingDotsVisual(angleRadians, visible) {
+    ringDots.classList.toggle("visible", visible);
+    ringDots.style.transform = `rotate(${angleRadians * CONFIG.angle.radiansToDegrees}deg)`;
+
+    ringDotItems.forEach((dot, index) => {
+      const dotAngle = index * CONFIG.angle.quarterTurnRadians;
+      const x = Math.cos(dotAngle) * CONFIG.rightControl.ringDotRadiusPixels;
+      const y = Math.sin(dotAngle) * CONFIG.rightControl.ringDotRadiusPixels;
+      dot.style.transform = `translate(${x}px, ${y}px)`;
+    });
+  }
+
+  lookKnob.addEventListener("pointerdown", event => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    knobDrag.active = true;
+    knobDrag.pointerId = event.pointerId;
+    knobDrag.startCameraQuaternion.copy(camera.quaternion);
+
+    lookKnob.setPointerCapture(knobDrag.pointerId);
+  });
+
+  lookKnob.addEventListener("pointermove", event => {
+    if (!knobDrag.active || event.pointerId !== knobDrag.pointerId) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    const input = getJoystickInputFromPointer(rightControl, event);
+    setLookKnobVisual(input.x, input.y);
+
+    rotateByAxisAngleFromQuaternion(
+      knobDrag.startCameraQuaternion,
+      input.x,
+      input.y,
+      CONFIG.joystick.absoluteRotationRadiansAtFullStretch
+    );
+  });
+
+  function releaseKnob(event) {
+    if (!knobDrag.active || event.pointerId !== knobDrag.pointerId) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    knobDrag.active = false;
+    knobDrag.pointerId = null;
+    setLookKnobVisual(0, 0);
+  }
+
+  lookKnob.addEventListener("pointerup", releaseKnob);
+  lookKnob.addEventListener("pointercancel", releaseKnob);
+
+  innerGuide.addEventListener("pointerdown", event => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    rollDrag.active = true;
+    rollDrag.pointerId = event.pointerId;
+    rollDrag.startCameraQuaternion.copy(camera.quaternion);
+    rollDrag.startPointerAngleRadians = getLocalPointerState(rightControl, event).angleRadians;
+
+    updateRingDotsVisual(0, true);
+    innerGuide.setPointerCapture(rollDrag.pointerId);
+  });
+
+  innerGuide.addEventListener("pointermove", event => {
+    if (!rollDrag.active || event.pointerId !== rollDrag.pointerId) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    const pointerState = getLocalPointerState(rightControl, event);
+    const totalAngleFromStart = normalizeSignedAngleDifference(
+      pointerState.angleRadians - rollDrag.startPointerAngleRadians
+    );
+
+    updateRingDotsVisual(totalAngleFromStart, true);
+
+    rotateRollFromQuaternion(
+      rollDrag.startCameraQuaternion,
+      totalAngleFromStart
+    );
+  });
+
+  function releaseRoll(event) {
+    if (!rollDrag.active || event.pointerId !== rollDrag.pointerId) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    rollDrag.active = false;
+    rollDrag.pointerId = null;
+    updateRingDotsVisual(CONFIG.rightControl.resetAngleRadians, false);
+  }
+
+  innerGuide.addEventListener("pointerup", releaseRoll);
+  innerGuide.addEventListener("pointercancel", releaseRoll);
+
+  updateRingDotsVisual(CONFIG.rightControl.resetAngleRadians, false);
+}
+
+setupMovementJoystick();
+setupRightRotationControls();
+
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+const buildingMeshes = [];
+const buildingGridCells = new Set();
+let resetSphere;
+const sphereRunState = {
+  cellX: 0,
+  cellZ: 0,
+  dirX: 1,
+  dirZ: 0,
+  targetCellX: 1,
+  targetCellZ: 0
+};
+
+function getGridCellCenter(cellX, cellZ) {
+  const cell = CONFIG.grid.cellSize;
+  return {
+    x: cellX * cell + cell / 2,
+    z: cellZ * cell + cell / 2
+  };
+}
+
+function createUniformGrid() {
+  const linePoints = [];
+  const half = CONFIG.grid.halfCellCount;
+  const cell = CONFIG.grid.cellSize;
+  const extent = half * cell;
+
+  for (let i = -half; i <= half; i++) {
+    const coord = i * cell;
+
+    linePoints.push(
+      new THREE.Vector3(coord, 0, -extent),
+      new THREE.Vector3(coord, 0, extent)
+    );
+
+    linePoints.push(
+      new THREE.Vector3(-extent, 0, coord),
+      new THREE.Vector3(extent, 0, coord)
+    );
+  }
+
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: CONFIG.grid.lineColor });
+  worldGroup.add(new THREE.LineSegments(lineGeometry, lineMaterial));
+}
+
+function createBuildings() {
+  const material = new THREE.MeshStandardMaterial({
+    color: CONFIG.buildings.color,
+    emissive: CONFIG.buildings.emissiveColor
+  });
+
+  const half = CONFIG.grid.halfCellCount;
+  const usableMin = -half;
+  const usableMax = half - 1;
+  const availableCells = [];
+
+  for (let x = usableMin; x <= usableMax; x++) {
+    for (let z = usableMin; z <= usableMax; z++) {
+      if (Math.abs(x) <= 1 && Math.abs(z) <= 1) continue;
+      availableCells.push({ x, z });
+    }
+  }
+
+  for (let i = availableCells.length - 1; i > 0; i--) {
+    const j = Math.floor(randomUnit() * (i + 1));
+    [availableCells[i], availableCells[j]] = [availableCells[j], availableCells[i]];
+  }
+
+  const selectedCells = availableCells.slice(0, CONFIG.buildings.count);
+
+  for (const cellPosition of selectedCells) {
+    const center = getGridCellCenter(cellPosition.x, cellPosition.z);
+
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        CONFIG.buildings.footprintWidth,
+        1,
+        CONFIG.buildings.footprintDepth
+      ),
+      material
+    );
+
+    mesh.position.x = center.x;
+    mesh.position.z = center.z;
+    mesh.userData.phase = randomUnit() * CONFIG.angle.fullTurnRadians;
+    mesh.userData.cellX = cellPosition.x;
+    mesh.userData.cellZ = cellPosition.z;
+
+    worldGroup.add(mesh);
+    buildingMeshes.push(mesh);
+    buildingGridCells.add(`${cellPosition.x},${cellPosition.z}`);
+  }
+}
+
+function createResetSphere() {
+  const geometry = new THREE.SphereGeometry(CONFIG.sphere.radius, 32, 16);
+  const material = new THREE.MeshStandardMaterial({
+    color: CONFIG.sphere.color,
+    emissive: CONFIG.sphere.emissiveColor
+  });
+
+  resetSphere = new THREE.Mesh(geometry, material);
+  worldGroup.add(resetSphere);
+  resetSpherePosition();
+}
+
+function isCellBlocked(cellX, cellZ) {
+  return buildingGridCells.has(`${cellX},${cellZ}`);
+}
+
+function isCellInsideGrid(cellX, cellZ) {
+  const half = CONFIG.grid.halfCellCount;
+  return cellX >= -half && cellX <= half - 1 && cellZ >= -half && cellZ <= half - 1;
+}
+
+function chooseSphereDirection() {
+  const directions = [
+    { x: 1, z: 0 },
+    { x: -1, z: 0 },
+    { x: 0, z: 1 },
+    { x: 0, z: -1 }
+  ];
+
+  const validDirections = directions.filter(direction => {
+    const nextX = sphereRunState.cellX + direction.x;
+    const nextZ = sphereRunState.cellZ + direction.z;
+    return isCellInsideGrid(nextX, nextZ) && !isCellBlocked(nextX, nextZ);
+  });
+
+  if (!validDirections.length) {
+    sphereRunState.dirX = 0;
+    sphereRunState.dirZ = 0;
+    sphereRunState.targetCellX = sphereRunState.cellX;
+    sphereRunState.targetCellZ = sphereRunState.cellZ;
+    return;
+  }
+
+  const selected = validDirections[Math.floor(randomUnit() * validDirections.length)];
+  sphereRunState.dirX = selected.x;
+  sphereRunState.dirZ = selected.z;
+  sphereRunState.targetCellX = sphereRunState.cellX + selected.x;
+  sphereRunState.targetCellZ = sphereRunState.cellZ + selected.z;
+}
+
+function setSphereToCell(cellX, cellZ) {
+  sphereRunState.cellX = cellX;
+  sphereRunState.cellZ = cellZ;
+
+  const center = getGridCellCenter(cellX, cellZ);
+  resetSphere.position.set(center.x, CONFIG.sphere.y, center.z);
+
+  chooseSphereDirection();
+}
+
+function resetSpherePosition() {
+  const half = CONFIG.grid.halfCellCount;
+  const usableMin = -half;
+  const usableMax = half - 1;
+
+  for (let attempt = 0; attempt < CONFIG.sphere.maxPlacementAttempts; attempt++) {
+    const cellX = Math.floor(randomUnit() * (usableMax - usableMin + 1)) + usableMin;
+    const cellZ = Math.floor(randomUnit() * (usableMax - usableMin + 1)) + usableMin;
+
+    if (isCellBlocked(cellX, cellZ)) continue;
+
+    setSphereToCell(cellX, cellZ);
+    return;
+  }
+
+  setSphereToCell(0, 0);
+}
+
+function updateSphereGridRun(deltaTime) {
+  if (!resetSphere) return;
+
+  const targetCenter = getGridCellCenter(
+    sphereRunState.targetCellX,
+    sphereRunState.targetCellZ
+  );
+
+  const targetPosition = new THREE.Vector3(
+    targetCenter.x,
+    CONFIG.sphere.y,
+    targetCenter.z
+  );
+
+  const toTarget = targetPosition.clone().sub(resetSphere.position);
+  const distanceToTarget = toTarget.length();
+  const travelDistance = CONFIG.sphere.gridRunSpeed * deltaTime;
+
+  if (distanceToTarget <= travelDistance || distanceToTarget <= 0.0001) {
+    resetSphere.position.copy(targetPosition);
+    sphereRunState.cellX = sphereRunState.targetCellX;
+    sphereRunState.cellZ = sphereRunState.targetCellZ;
+
+    const nextCellX = sphereRunState.cellX + sphereRunState.dirX;
+    const nextCellZ = sphereRunState.cellZ + sphereRunState.dirZ;
+    const shouldTurn =
+      randomUnit() < CONFIG.sphere.directionChangeChance ||
+      !isCellInsideGrid(nextCellX, nextCellZ) ||
+      isCellBlocked(nextCellX, nextCellZ);
+
+    if (shouldTurn) {
+      chooseSphereDirection();
+    } else {
+      sphereRunState.targetCellX = nextCellX;
+      sphereRunState.targetCellZ = nextCellZ;
+    }
+
+    return;
+  }
+
+  resetSphere.position.addScaledVector(toTarget.normalize(), travelDistance);
+}
+
+function updateBuildings(elapsedTimeSeconds) {
+  for (const building of buildingMeshes) {
+    const t = 0.5 + 0.5 * Math.sin(
+      elapsedTimeSeconds * CONFIG.buildings.oscillationSpeed + building.userData.phase
+    );
+
+    const height = CONFIG.buildings.lowHeight +
+      t * (CONFIG.buildings.highHeight - CONFIG.buildings.lowHeight);
+
+    building.scale.y = height;
+    building.position.y = height / 2;
+    building.userData.currentHeight = height;
+  }
+}
+
+function resetCameraAboveGridCenterFacingDown() {
+  rig.position.set(0, CONFIG.camera.resetHeight, 0);
+  rig.quaternion.identity();
+  rig.rotation.set(0, 0, 0);
+
+  camera.position.set(0, 0, 0);
+  camera.rotation.set(0, 0, 0);
+  camera.quaternion.copy(CAMERA_DOWN_QUATERNION);
+  camera.updateMatrixWorld(true);
+}
+
+function cameraWorldPosition() {
+  const position = new THREE.Vector3();
+  camera.getWorldPosition(position);
+  return position;
+}
+
+function isCameraCollidingWithBuilding(cameraPosition) {
+  const halfWidth =
+    CONFIG.buildings.footprintWidth / 2 +
+    CONFIG.camera.collisionRadius +
+    CONFIG.buildings.collisionPadding;
+
+  const halfDepth =
+    CONFIG.buildings.footprintDepth / 2 +
+    CONFIG.camera.collisionRadius +
+    CONFIG.buildings.collisionPadding;
+
+  return buildingMeshes.some(building => {
+    const height = building.userData.currentHeight ?? CONFIG.buildings.highHeight;
+
+    return (
+      cameraPosition.x >= building.position.x - halfWidth &&
+      cameraPosition.x <= building.position.x + halfWidth &&
+      cameraPosition.y >= 0 &&
+      cameraPosition.y <= height + CONFIG.camera.collisionRadius &&
+      cameraPosition.z >= building.position.z - halfDepth &&
+      cameraPosition.z <= building.position.z + halfDepth
+    );
+  });
+}
+
+function maybeHandleCameraCollisions() {
+  const position = cameraWorldPosition();
+
+  if (
+    position.y <= CONFIG.camera.floorMinimumY ||
+    isCameraCollidingWithBuilding(position)
+  ) {
+    resetCameraAboveGridCenterFacingDown();
+  }
+}
+
+function maybeResetSphereOnTouch() {
+  const position = cameraWorldPosition();
+
+  if (position.distanceTo(resetSphere.position) <= CONFIG.sphere.touchDistance) {
+    resetSpherePosition();
+  }
+}
+
+createUniformGrid();
+createBuildings();
+createResetSphere();
+resetCameraAboveGridCenterFacingDown();
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const deltaTime = Math.min(clock.getDelta(), CONFIG.render.maxDeltaTime);
+  const elapsedTime = clock.elapsedTime;
+
+  const movementVector = new THREE.Vector3();
+
+  if (keys.has("KeyW")) movementVector.z -= 1;
+  if (keys.has("KeyS")) movementVector.z += 1;
+  if (keys.has("KeyA")) movementVector.x -= 1;
+  if (keys.has("KeyD")) movementVector.x += 1;
+  if (keys.has("Space")) movementVector.y += 1;
+  if (keys.has("ControlLeft") || keys.has("ControlRight")) movementVector.y -= 1;
+
+  if (movementVector.lengthSq()) {
+    movementVector.normalize();
+    movementVector.applyQuaternion(camera.quaternion);
+    rig.position.addScaledVector(movementVector, CONFIG.movement.baseMoveSpeed * deltaTime);
+  }
+
+  let forwardSpeed = 0;
+
+  if (joystickMoveInput.y < 0) {
+    forwardSpeed += -joystickMoveInput.y * CONFIG.movement.joystickForwardSpeed;
+  }
+
+  if (joystickMoveInput.y > 0) {
+    forwardSpeed -= joystickMoveInput.y * CONFIG.movement.joystickReverseSpeed;
+  }
+
+  if (keys.has("KeyE") || keys.has("ShiftLeft") || keys.has("ShiftRight")) {
+    forwardSpeed += CONFIG.movement.keyboardForwardSpeed;
+  }
+
+  if (keys.has("KeyQ") || keys.has("AltLeft") || keys.has("AltRight")) {
+    forwardSpeed -= CONFIG.movement.keyboardReverseSpeed;
+  }
+
+  if (Math.abs(forwardSpeed) > 0) {
+    const forwardVector = CAMERA_LOCAL_FORWARD_AXIS
+      .clone()
+      .applyQuaternion(camera.quaternion)
+      .normalize();
+
+    rig.position.addScaledVector(forwardVector, forwardSpeed * deltaTime);
+  }
+
+  updateBuildings(elapsedTime);
+  updateSphereGridRun(deltaTime);
+  maybeResetSphereOnTouch();
+  maybeHandleCameraCollisions();
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
