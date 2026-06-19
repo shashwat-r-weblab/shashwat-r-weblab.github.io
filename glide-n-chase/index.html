@@ -179,7 +179,8 @@ const CONFIG = {
     deadZone: 0,
     inputRadiusPixels: 52,
     visualTravelPixels: 48,
-    absoluteRotationRadiansAtFullStretch: 2.4
+    // absoluteRotationRadiansAtFullStretch: 2.4,
+    absoluteRotationRadiansAtFullStretch: 0.3
   },
 
   rightControl: {
@@ -335,8 +336,8 @@ function makeAxisAngleRotationFromScreenVector(referenceQuaternion, inputX, inpu
 function rotateByAxisAngleFromQuaternion(referenceQuaternion, inputX, inputY, radiansPerUnit) {
   const rotationDelta = makeAxisAngleRotationFromScreenVector(
     referenceQuaternion,
-    inputX,
-    inputY,
+    -inputX,
+    -inputY,
     radiansPerUnit
   );
 
