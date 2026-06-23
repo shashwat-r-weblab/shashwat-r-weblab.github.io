@@ -430,12 +430,6 @@ function setupRightRotationControls() {
     event.stopPropagation();
     event.preventDefault();
 
-    steeringState.xDeviation = 0;
-    steeringState.yDeviation = -Math.PI / 2;
-
-    updateSteerKnobVisual();
-    applyCameraOrientationFromSteering();
-
     steeringState.active = true;
     steeringState.pointerId = event.pointerId;
     steerControl.setPointerCapture(steeringState.pointerId);
