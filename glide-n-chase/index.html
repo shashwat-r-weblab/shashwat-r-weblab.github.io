@@ -256,7 +256,9 @@ const steeringState = {
   active: false,
   pointerId: null,
   xDeviation: 0,
-  yDeviation: -Math.PI / 2
+  yDeviation: -Math.PI / 2,
+  lastClientX: 0,
+  lastClientY: 0
 };
 
 const CAMERA_LOCAL_FORWARD_AXIS = new THREE.Vector3(0, 0, -1);
@@ -416,11 +418,23 @@ function setupRightRotationControls() {
   function updateSteeringFromPointerDelta(event) {
     const bounds = steerControl.getBoundingClientRect();
 
-    const deltaX = event.movementX / bounds.width * CONFIG.angle.fullTurnRadians;
-    const deltaY = event.movementY / bounds.height * CONFIG.angle.fullTurnRadians;
+    const pointerDeltaX = event.clientX - steeringState.lastClientX;
+    const pointerDeltaY = event.clientY - steeringState.lastClientY;
 
-    steeringState.xDeviation = wrapRadians(steeringState.xDeviation + deltaX);
-    steeringState.yDeviation = wrapRadians(steeringState.yDeviation - deltaY);
+    steeringState.lastClientX = event.clientX;
+    steeringState.lastClientY = event.clientY;
+
+    const deltaX =
+      pointerDeltaX / bounds.width * CONFIG.angle.fullTurnRadians;
+
+    const deltaY =
+      pointerDeltaY / bounds.height * CONFIG.angle.fullTurnRadians;
+
+    steeringState.xDeviation =
+      wrapRadians(steeringState.xDeviation + deltaX);
+
+    steeringState.yDeviation =
+      wrapRadians(steeringState.yDeviation - deltaY);
 
     updateSteerKnobVisual();
     applyCameraOrientationFromSteering();
@@ -432,6 +446,9 @@ function setupRightRotationControls() {
 
     steeringState.active = true;
     steeringState.pointerId = event.pointerId;
+    steeringState.lastClientX = event.clientX;
+    steeringState.lastClientY = event.clientY;
+
     steerControl.setPointerCapture(steeringState.pointerId);
   });
 
