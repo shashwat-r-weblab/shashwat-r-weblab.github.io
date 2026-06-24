@@ -258,7 +258,8 @@ const steeringState = {
   xDeviation: 0,
   yDeviation: -Math.PI / 2,
   lastClientX: 0,
-  lastClientY: 0
+  lastClientY: 0,
+  skipNextMove: false
 };
 
 const CAMERA_LOCAL_FORWARD_AXIS = new THREE.Vector3(0, 0, -1);
@@ -448,6 +449,7 @@ function setupRightRotationControls() {
     steeringState.pointerId = event.pointerId;
     steeringState.lastClientX = event.clientX;
     steeringState.lastClientY = event.clientY;
+    steeringState.skipNextMove = true;
 
     steerControl.setPointerCapture(steeringState.pointerId);
   });
@@ -457,6 +459,13 @@ function setupRightRotationControls() {
 
     event.stopPropagation();
     event.preventDefault();
+
+    if (steeringState.skipNextMove) {
+      steeringState.lastClientX = event.clientX;
+      steeringState.lastClientY = event.clientY;
+      steeringState.skipNextMove = false;
+      return;
+    }
 
     updateSteeringFromPointerDelta(event);
   });
